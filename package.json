@@ -1,0 +1,13 @@
+{
+  "name": "rag-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"backend,frontend\" --prefix-colors \"cyan,magenta\" \"npm start --prefix backend\" \"npm run dev --prefix frontend\"",
+    "start": "npm start --prefix backend",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

@@ -1,0 +1,88 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import { getChatResponse } from './services/llm.js';
+import { supabase, testConnection } from './config/database.js';
+import ragRoutes from './routes/rag.js';
+
+const app = express();
+const PORT = 3000;
+
+app.use(cors());
+app.use(express.json());
+
+// Test database connection on startup
+testConnection();
+
+// Health check
+app.get('/api/health', async (req, res) => {
+  const dbConnected = await testConnection();
+  res.json({ 
+    status: 'ok', 
+    llm: process.env.GROQ_API_KEY ? 'configured' : 'not configured',
+    database: dbConnected ? 'connected' : 'disconnected',
+    mode: 'RAG (Retrieval Augmented Generation)'
+  });
+});
+
+// Chat endpoint
+app.post('/api/chat', async (req, res) => {
+  const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: 'Message is required' });
+  }
+
+  try {
+    const reply = await getChatResponse(message);
+
+    res.json({
+      reply,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Chat error:', error.message);
+
+    // Return user-friendly error
+    const statusCode = error.status === 401 ? 401 : 503;
+    const errorMessage = error.status === 401
+      ? 'Invalid API key. Check your .env file.'
+      : 'AI service temporarily unavailable. Please try again.';
+
+    res.status(statusCode).json({
+      error: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// RAG routes (new)
+app.use('/api/rag', ragRoutes);
+
+// ── Supabase keep-alive ──────────────────────────────────────────────────────
+// Supabase free tier pauses projects after 7 days of inactivity.
+// This pings the DB every 3 days to keep it active.
+// Only runs when the server is deployed (not in local dev).
+if (process.env.NODE_ENV === 'production') {
+  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      await supabase.from('documents').select('count', { count: 'exact', head: true });
+      console.log('✅ Supabase keep-alive ping sent');
+    } catch (err) {
+      console.warn('⚠️ Keep-alive ping failed:', err.message);
+    }
+  }, THREE_DAYS_MS);
+}
+
+app.listen(PORT, () => {
+  console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🤖 LLM: Groq (${process.env.LLM_MODEL || 'llama-3.1-8b-instant'})`);
+  console.log(`💾 Database: Supabase (pgvector)`);
+  console.log(`📚 Mode: RAG (Retrieval Augmented Generation)`);
+  console.log(`\n📖 API Endpoints:`);
+  console.log(`   POST /api/rag/chat      - RAG chat with retrieval`);
+  console.log(`   POST /api/rag/documents  - Upload documents`);
+  console.log(`   POST /api/rag/seed       - Seed with sample FAQs`);
+  console.log(`   GET  /api/rag/stats      - Knowledge base stats\n`);
+});

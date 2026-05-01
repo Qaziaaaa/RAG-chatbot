@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sovereign Intelligence Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed-dim": "#ddb7ff",
+                    "tertiary-fixed-dim": "#bec6e0",
+                    "on-background": "#dce1fb",
+                    "on-secondary-fixed": "#2c0051",
+                    "on-surface": "#dce1fb",
+                    "inverse-surface": "#dce1fb",
+                    "outline": "#859397",
+                    "surface-container-low": "#151b2d",
+                    "primary-fixed-dim": "#2fd9f4",
+                    "background": "#0c1324",
+                    "inverse-on-surface": "#2a3043",
+                    "on-tertiary-container": "#474e64",
+                    "on-surface-variant": "#bbc9cd",
+                    "tertiary-container": "#b9c0da",
+                    "surface-variant": "#2e3447",
+                    "primary-container": "#22d3ee",
+                    "surface-container-lowest": "#070d1f",
+                    "error": "#ffb4ab",
+                    "on-secondary-fixed-variant": "#6900b3",
+                    "error-container": "#93000a",
+                    "surface-container": "#191f31",
+                    "on-primary-fixed-variant": "#004e5a",
+                    "surface": "#0c1324",
+                    "on-secondary-container": "#d6a9ff",
+                    "on-primary": "#00363e",
+                    "outline-variant": "#3c494c",
+                    "on-tertiary": "#283044",
+                    "surface-container-highest": "#2e3447",
+                    "on-primary-container": "#005763",
+                    "primary-fixed": "#a2eeff",
+                    "on-primary-fixed": "#001f25",
+                    "on-secondary": "#490080",
+                    "surface-container-high": "#23293c",
+                    "secondary": "#ddb7ff",
+                    "tertiary": "#d5dcf6",
+                    "tertiary-fixed": "#dae2fd",
+                    "inverse-primary": "#006877",
+                    "secondary-fixed": "#f0dbff",
+                    "primary": "#8aebff",
+                    "secondary-container": "#6f00be",
+                    "surface-dim": "#0c1324",
+                    "surface-tint": "#2fd9f4",
+                    "surface-bright": "#33394c",
+                    "on-error": "#690005",
+                    "on-error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#131b2e",
+                    "on-tertiary-fixed-variant": "#3f465c"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "grid-density": "tight",
+                    "gutter": "16px",
+                    "unit": "4px",
+                    "margin": "32px"
+            },
+            "fontFamily": {
+                    "headline-md": [
+                            "Space Grotesk"
+                    ],
+                    "label-caps": [
+                            "Space Grotesk"
+                    ],
+                    "headline-xl": [
+                            "Space Grotesk"
+                    ],
+                    "body-base": [
+                            "Inter"
+                    ],
+                    "data-mono": [
+                            "Space Grotesk"
+                    ]
+            },
+            "fontSize": {
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-caps": [
+                            "12px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "0.2em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-xl": [
+                            "48px",
+                            {
+                                    "lineHeight": "1.1",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-base": [
+                            "16px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "letterSpacing": "0em",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "data-mono": [
+                            "14px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "letterSpacing": "0.1em",
+                                    "fontWeight": "500"
+                            }
+                    ]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            background-image: linear-gradient(theme('colors.surface-container-low') 1px, transparent 1px), linear-gradient(90deg, theme('colors.surface-container-low') 1px, transparent 1px);
+            background-size: 32px 32px;
+            background-position: center top;
+        }
+        
+        .holo-panel {
+            background-color: rgba(12, 19, 36, 0.4); /* background with 40% opacity */
+            backdrop-filter: blur(20px);
+            border: 1px solid theme('colors.surface-variant');
+            position: relative;
+        }
+        
+        .holo-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(255, 255, 255, 0.05), transparent);
+            pointer-events: none;
+        }
+
+        .circuit-line {
+            background-color: theme('colors.surface-variant');
+        }
+
+        .circuit-node {
+            width: 4px;
+            height: 4px;
+            background-color: theme('colors.primary-container');
+        }
+        
+        .glass-glow {
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.15);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen overflow-x-hidden font-body-base text-body-base pb-8">
+<!-- TopNavBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-14 bg-slate-950/80 backdrop-blur-xl border-b border-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.05)] font-['Space_Grotesk'] tracking-widest uppercase text-[10px]">
+<div class="flex items-center gap-8">
+<div class="text-xl font-bold tracking-tighter text-cyan-400">
+                SOVEREIGN_INTEL
+            </div>
+<nav class="hidden md:flex items-center gap-6">
+<!-- Active Item: Assuming Home/Dashboard context maps to NEURAL_NET based on prompt -->
+<a class="text-cyan-400 border-b border-cyan-400 pb-1 hover:text-cyan-300 hover:bg-cyan-500/5 transition-all duration-150 ease-in-out cursor-crosshair" href="#">NEURAL_NET</a>
+<a class="text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5 transition-all duration-150 ease-in-out cursor-crosshair" href="#">DATA_LAKE</a>
+<a class="text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5 transition-all duration-150 ease-in-out cursor-crosshair" href="#">COGNITION</a>
+<a class="text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5 transition-all duration-150 ease-in-out cursor-crosshair" href="#">VECTORS</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<button class="text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5 transition-all duration-150 ease-in-out cursor-crosshair p-1">
+<span class="material-symbols-outlined text-base">sensors</span>
+</button>
+<button class="text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5 transition-all duration-150 ease-in-out cursor-crosshair p-1">
+<span class="material-symbols-outlined text-base">memory</span>
+</button>
+<button class="text-slate-500 hover:text-cyan-300 hover:bg-cyan-500/5 transition-all duration-150 ease-in-out cursor-crosshair p-1">
+<span class="material-symbols-outlined text-base">settings</span>
+</button>
+</div>
+<div class="w-8 h-8 rounded-none border border-cyan-500/50 overflow-hidden relative">
+<img alt="Admin Avatar" class="w-full h-full object-cover mix-blend-luminosity opacity-80" data-alt="High contrast black and white profile photo of a technical operator" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDS56bUyLPdASjXa4aaNSjBcG2zLTn6mal5nxQcq1wPOx5X2sy0V5WSUIsNlylDjV-P3fqTFNpTdUKQAP4P8iCwigtzynEM_RZgIPZC37Pq1c7qXRgrcUvs_beJv6xeLF199TnHWDoCeX3K0yg7Tp59d-V7zv5oJWKVVlzlFJd8QPqxeQU8Z8mkZJBACkqcMZK_m8bLHqEGQ-WujQpD0LjhjV6gBuLVxaTQ5je3FNb6bcMTJhJG4GQijldOQIoMYTsqMcb2qcxPHC4R"/>
+<div class="absolute inset-0 bg-cyan-500/20 mix-blend-overlay"></div>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="hidden md:flex fixed left-0 top-14 bottom-0 flex-col z-40 bg-slate-950/60 backdrop-blur-2xl border-r border-slate-800 w-64 font-['Space_Grotesk'] uppercase font-medium text-[11px]">
+<div class="p-6 border-b border-slate-800">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-10 h-10 border border-cyan-400/30 flex items-center justify-center bg-cyan-900/20">
+<span class="material-symbols-outlined text-cyan-400">api</span>
+</div>
+<div>
+<div class="text-cyan-400 font-bold tracking-wider">COMMAND_HUB</div>
+<div class="text-[9px] text-slate-500 tracking-widest mt-1">SYS_STATUS: ACTIVE</div>
+</div>
+</div>
+</div>
+<nav class="flex-1 overflow-y-auto py-4 flex flex-col gap-1">
+<a class="group transition-all duration-200 bg-cyan-500/10 text-cyan-400 border-l-2 border-cyan-400 px-4 py-3 flex items-center gap-3" href="#">
+<span class="material-symbols-outlined text-[18px]">terminal</span>
+                TERMINAL
+            </a>
+<a class="group transition-all duration-200 text-slate-500 px-4 py-3 flex items-center gap-3 hover:bg-slate-900/50 hover:text-cyan-200 border-l-2 border-transparent hover:border-slate-700" href="#">
+<span class="material-symbols-outlined text-[18px]">inventory_2</span>
+                ARCHIVE
+            </a>
+<a class="group transition-all duration-200 text-slate-500 px-4 py-3 flex items-center gap-3 hover:bg-slate-900/50 hover:text-cyan-200 border-l-2 border-transparent hover:border-slate-700" href="#">
+<span class="material-symbols-outlined text-[18px]">layers</span>
+                MODEL_WEIGHTS
+            </a>
+<a class="group transition-all duration-200 text-slate-500 px-4 py-3 flex items-center gap-3 hover:bg-slate-900/50 hover:text-cyan-200 border-l-2 border-transparent hover:border-slate-700" href="#">
+<span class="material-symbols-outlined text-[18px]">account_tree</span>
+                GRAPH_DB
+            </a>
+<a class="group transition-all duration-200 text-slate-500 px-4 py-3 flex items-center gap-3 hover:bg-slate-900/50 hover:text-cyan-200 border-l-2 border-transparent hover:border-slate-700" href="#">
+<span class="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                SECURITY
+            </a>
+</nav>
+<div class="mt-auto border-t border-slate-800 py-2">
+<a class="group transition-all duration-200 text-slate-500 px-4 py-3 flex items-center gap-3 hover:bg-slate-900/50 hover:text-cyan-200" href="#">
+<span class="material-symbols-outlined text-[18px]">list_alt</span>
+                LOGS
+            </a>
+<a class="group transition-all duration-200 text-slate-500 px-4 py-3 flex items-center gap-3 hover:bg-slate-900/50 hover:text-cyan-200" href="#">
+<span class="material-symbols-outlined text-[18px]">power_settings_new</span>
+                POWER
+            </a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="pt-14 md:pl-64 min-h-screen flex flex-col relative z-10">
+<!-- Hero Section -->
+<section class="relative min-h-[500px] flex items-center px-8 py-16 overflow-hidden">
+<!-- decorative bg -->
+<div class="absolute inset-0 z-0 pointer-events-none opacity-20" style="background-image: radial-gradient(circle at 70% 50%, theme('colors.primary-container') 0%, transparent 60%); mix-blend-mode: screen;"></div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter w-full max-w-7xl mx-auto relative z-10">
+<!-- Hero Content -->
+<div class="col-span-1 lg:col-span-6 flex flex-col justify-center">
+<div class="inline-flex items-center gap-2 mb-6">
+<span class="w-2 h-2 bg-primary-container rounded-none"></span>
+<span class="font-label-caps text-label-caps text-primary-container">SYSTEM INITIALIZED</span>
+<span class="h-[1px] w-12 bg-primary-container ml-2 opacity-50"></span>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-on-surface mb-6 uppercase">
+                        Sovereign<br/>
+<span class="text-primary-container">Intelligence Engine</span>
+</h1>
+<p class="font-body-base text-body-base text-on-surface-variant max-w-md mb-8">
+                        Central command node for high-density Retrieval-Augmented Generation. Processing quantum context arrays and synthesizing real-time neural outputs.
+                    </p>
+<div class="flex gap-4">
+<button class="bg-primary-container text-on-primary font-label-caps text-label-caps px-6 py-3 uppercase tracking-widest hover:bg-primary transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">rocket_launch</span>
+                            ENGAGE CORE
+                        </button>
+<button class="border border-primary-container text-primary-container font-label-caps text-label-caps px-6 py-3 uppercase tracking-widest hover:bg-primary-container/10 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">troubleshoot</span>
+                            DIAGNOSTICS
+                        </button>
+</div>
+</div>
+<!-- Hero Visualization (3D Core placeholder) -->
+<div class="col-span-1 lg:col-span-6 relative h-[400px] flex items-center justify-center">
+<!-- Circular tech rings -->
+<div class="absolute w-64 h-64 border border-outline-variant rounded-full opacity-30 border-dashed animate-[spin_20s_linear_infinite]"></div>
+<div class="absolute w-80 h-80 border border-primary-container rounded-full opacity-20 border-dotted animate-[spin_30s_linear_infinite_reverse]"></div>
+<div class="absolute w-48 h-48 border border-secondary-container rounded-full opacity-40 mix-blend-screen"></div>
+<!-- Core element -->
+<div class="relative w-32 h-32 bg-primary-container/20 glass-glow rounded-full flex items-center justify-center backdrop-blur-md">
+<div class="w-16 h-16 bg-primary-container rounded-full shadow-[0_0_30px_theme('colors.primary-container')] mix-blend-screen"></div>
+</div>
+<!-- Data callouts -->
+<div class="absolute top-10 right-10 holo-panel p-2 font-data-mono text-[10px] text-primary-container">
+<div class="flex items-center gap-2">
+<div class="w-1 h-1 bg-primary-container"></div>
+                             LATENCY: 4ms
+                         </div>
+</div>
+<div class="absolute bottom-10 left-10 holo-panel p-2 font-data-mono text-[10px] text-secondary">
+<div class="flex items-center gap-2">
+<div class="w-1 h-1 bg-secondary"></div>
+                             VECTORS: 1.4B
+                         </div>
+</div>
+</div>
+</div>
+<!-- Horizontal Circuit line connecting to next section -->
+<div class="absolute bottom-0 left-8 right-8 h-[1px] circuit-line hidden lg:block">
+<div class="absolute top-[-1px] left-1/4 circuit-node"></div>
+<div class="absolute top-[-1px] right-1/4 circuit-node"></div>
+</div>
+</section>
+<!-- Features Bento Grid -->
+<section class="px-8 py-12 max-w-7xl mx-auto w-full">
+<div class="mb-8 flex items-center gap-4">
+<h2 class="font-headline-md text-headline-md text-on-surface uppercase">Core Subsystems</h2>
+<div class="flex-1 h-[1px] circuit-line"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-unit">
+<!-- Feature 1: Neural Vector Mapping -->
+<div class="md:col-span-8 holo-panel p-6 flex flex-col justify-between min-h-[250px] relative overflow-hidden group">
+<!-- Tech background pattern -->
+<div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: repeating-linear-gradient(45deg, theme('colors.primary-container') 0, theme('colors.primary-container') 1px, transparent 1px, transparent 10px);"></div>
+<div class="flex justify-between items-start relative z-10">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-3xl">hub</span>
+<h3 class="font-headline-md text-[20px] text-on-surface uppercase">Neural Vector Mapping</h3>
+</div>
+<span class="font-data-mono text-xs text-outline">MOD_01</span>
+</div>
+<div class="mt-4 relative z-10">
+<p class="font-body-base text-sm text-on-surface-variant max-w-lg mb-4">High-dimensional embedding space projection for semantic relationship visualization and immediate similarity clustering.</p>
+<!-- Mini data grid -->
+<div class="grid grid-cols-3 gap-1 border-t border-b border-outline-variant py-2">
+<div class="flex flex-col">
+<span class="font-label-caps text-[9px] text-outline">DIMENSIONS</span>
+<span class="font-data-mono text-sm text-on-surface">1536</span>
+</div>
+<div class="flex flex-col border-l border-outline-variant pl-2">
+<span class="font-label-caps text-[9px] text-outline">INDEXING</span>
+<span class="font-data-mono text-sm text-on-surface">HNSW</span>
+</div>
+<div class="flex flex-col border-l border-outline-variant pl-2">
+<span class="font-label-caps text-[9px] text-outline">STATUS</span>
+<span class="font-data-mono text-sm text-primary-container">OPTIMIZED</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Feature 2: Quantum Context -->
+<div class="md:col-span-4 holo-panel p-6 min-h-[250px] flex flex-col justify-between glass-glow border-primary-container/30">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-secondary text-3xl">all_inclusive</span>
+<div class="w-2 h-2 bg-secondary rounded-none animate-pulse"></div>
+</div>
+<div class="mt-8">
+<h3 class="font-headline-md text-[20px] text-on-surface uppercase mb-2">Quantum Context Retrieval</h3>
+<p class="font-body-base text-sm text-on-surface-variant">Simultaneous multi-path search execution across fragmented data lakes, bypassing traditional linear latency.</p>
+</div>
+</div>
+<!-- Feature 3: Real-time Synthesis -->
+<div class="md:col-span-12 holo-panel p-6 mt-unit">
+<div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-tertiary text-2xl">auto_fix_high</span>
+<h3 class="font-headline-md text-[20px] text-on-surface uppercase">Real-time Synthesis</h3>
+</div>
+<p class="font-body-base text-sm text-on-surface-variant max-w-xl">Dynamically generated, grounded responses synthesized from retrieved vectors with millisecond token streaming.</p>
+</div>
+<!-- Processing visualizer -->
+<div class="flex-1 w-full flex items-end gap-1 h-16 border-b border-outline-variant pb-1">
+<div class="w-full bg-surface-bright h-[20%]"></div>
+<div class="w-full bg-surface-bright h-[40%]"></div>
+<div class="w-full bg-primary-container/50 h-[80%] border-t border-primary-container"></div>
+<div class="w-full bg-surface-bright h-[30%]"></div>
+<div class="w-full bg-surface-bright h-[60%]"></div>
+<div class="w-full bg-secondary/50 h-[100%] border-t border-secondary"></div>
+<div class="w-full bg-surface-bright h-[50%]"></div>
+<div class="w-full bg-surface-bright h-[20%]"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="fixed bottom-0 right-0 w-full z-50 flex justify-between items-center px-4 h-8 bg-slate-950/90 backdrop-blur-lg border-t border-cyan-900/30 shadow-[0_-4px_10px_rgba(34,211,238,0.02)] font-mono text-[9px] tracking-tight">
+<div class="text-cyan-500">
+            © 2024 SOVEREIGN_INTEL // [LATENCY: 14ms] [NEURAL_LOAD: 12%]
+        </div>
+<div class="flex gap-4">
+<a class="text-slate-600 hover:text-cyan-300" href="#">SYSTEM_DIAGNOSTICS</a>
+<a class="text-slate-600 hover:text-cyan-300" href="#">ENCRYPTION_KEY_v4</a>
+</div>
+</footer>
+</body></html>
