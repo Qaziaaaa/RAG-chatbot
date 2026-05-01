@@ -78,7 +78,7 @@ function AuthModal({ onClose }) {
             <circle cx="15" cy="14" r="1.5" fill="currentColor" stroke="none"/>
             <path d="M9 18h6" strokeLinecap="round"/>
           </svg>
-          AI Knowledge Assistant
+          DocChat
         </h2>
         <p className="auth-subtitle">Sign in to keep your documents across devices</p>
 
@@ -615,7 +615,7 @@ export default function App() {
         setRefreshTrigger(t => t + 1);
         setMessages([{
           role: 'bot',
-          text: "**Welcome to the AI Knowledge Assistant!**\n\nUpload your documents or code files using the panel on the left, then ask me anything about them.\n\nI can summarize, explain, answer questions, and find information from your files.",
+          text: "**Welcome to DocChat!**\n\nUpload your documents or code files using the panel on the left, then ask me anything about them.\n\nI can summarize, explain, answer questions, and find information from your files.",
           sources: [],
           streaming: false
         }]);
@@ -625,7 +625,7 @@ export default function App() {
   }, []);
   const [messages, setMessages] = useState([{
     role: 'bot',
-    text: "**Welcome to the AI Knowledge Assistant!**\n\nUpload your documents or code files using the panel on the left, then ask me anything about them.\n\nI can summarize, explain, answer questions, and find information from your files.",
+    text: "**Welcome to DocChat!**\n\nUpload your documents or code files using the panel on the left, then ask me anything about them.\n\nI can summarize, explain, answer questions, and find information from your files.",
     sources: [],
     streaming: false
   }]);
@@ -793,7 +793,7 @@ export default function App() {
                 </svg>
               </div>
               <div className="header-info">
-                <span className="header-name">AI Knowledge Assistant</span>
+                <span className="header-name">DocChat — AI Knowledge Assistant</span>
                 <span className="header-status">
                   <span className={`status-dot${loading ? ' pulsing' : ''}`} />
                   {loading ? 'Thinking…'
@@ -897,7 +897,7 @@ export default function App() {
       {/* ── Footer ── */}
       <footer className="app-footer">
         <div className="footer-left">
-          AI Knowledge Assistant · Powered by RAG
+          DocChat · AI Knowledge Assistant
         </div>
         <div className="footer-right">
           <a className="footer-link" href="#">Help</a>
