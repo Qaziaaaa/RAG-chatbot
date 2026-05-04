@@ -9,7 +9,7 @@
 
 import express from 'express';
 import multer from 'multer';
-import { queryRAG, streamRAG, RAGConfig, getCacheStats } from '../services/rag.js';
+import { queryRAG, streamRAG, RAGConfig, getCacheStats, clearEmbeddingCache } from '../services/rag.js';
 import {
     storeDocument,
     storeDocumentsBatch,
@@ -273,6 +273,8 @@ router.get('/documents/:id', async (req, res) => {
 router.delete('/documents/:id', async (req, res) => {
     try {
         const result = await deleteDocument(req.params.id, req.userId);
+        // Clear embedding cache so deleted doc content is not returned in future searches
+        clearEmbeddingCache();
         res.json(result);
     } catch (error) {
         console.error('Delete document error:', error.message);

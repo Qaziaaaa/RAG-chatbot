@@ -205,6 +205,16 @@ export async function getDocumentWithChunks(documentId, userId = null) {
 export async function deleteDocument(documentId, userId = null) {
     console.log(`🗑️ Deleting document: ${documentId} (user: ${userId || 'anonymous'})`);
 
+    // Explicitly delete chunks first as a safety net
+    // (ON DELETE CASCADE should handle this, but belt-and-suspenders)
+    const { error: chunkErr } = await supabase
+        .from('document_chunks')
+        .delete()
+        .eq('document_id', documentId);
+    if (chunkErr) {
+        console.warn('⚠️ Could not delete chunks explicitly:', chunkErr.message);
+    }
+
     let query = supabase.from('documents').delete().eq('id', documentId);
     if (userId) query = query.eq('user_id', userId);
 

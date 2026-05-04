@@ -535,6 +535,13 @@ export function getCacheStats() {
     return { size: embeddingCache.size, maxSize: 100, sessions: sessionStore.size };
 }
 
+// Clear the embedding cache — call this after documents are deleted
+// so the next query re-embeds and searches fresh data
+export function clearEmbeddingCache() {
+    embeddingCache.clear();
+    console.log('🧹 Embedding cache cleared');
+}
+
 export async function querySimple(userQuery) {
     return await getChatResponse(userQuery);
 }
