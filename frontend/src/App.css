@@ -1159,25 +1159,28 @@ body {
   white-space: normal;
 }
 
-.doc-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.doc-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .doc-actions input[type="checkbox"] {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   cursor: pointer;
   accent-color: var(--cyan);
 }
 .doc-delete-btn {
-  background: none;
-  border: none;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 0.75rem;
-  padding: 2px 4px;
-  opacity: 0.35;
-  transition: opacity 0.12s, background 0.12s;
+  padding: 4px 6px;
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, border-color 0.12s;
 }
 .doc-delete-btn:hover {
-  opacity: 1;
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.20);
+  border-color: rgba(239, 68, 68, 0.50);
 }
 
 .filter-hint {

@@ -431,14 +431,23 @@ function DocumentLibrary({ selectedIds, onToggle, refreshTrigger, userId, access
   const handleDelete = async (e, id) => {
     e.stopPropagation();
     if (!confirm('Delete this document and all its chunks?')) return;
+    // Optimistic update — remove from UI immediately so user sees instant feedback
+    setDocs(prev => prev.filter(d => d.id !== id));
     try {
       const headers = accessToken
         ? { 'Authorization': `Bearer ${accessToken}` }
         : { 'X-User-Id': userId };
-      await fetch(`/api/rag/documents/${id}`, { method: 'DELETE', headers });
-      fetchDocs();
+      const res = await fetch(`/api/rag/documents/${id}`, { method: 'DELETE', headers });
+      if (!res.ok) {
+        // Revert on failure
+        fetchDocs();
+        alert('Delete failed — please try again.');
+      }
     }
-    catch { alert('Delete failed'); }
+    catch {
+      fetchDocs(); // revert on network error
+      alert('Delete failed');
+    }
   };
 
   if (loading) return <div className="doc-loading">Loading…</div>;

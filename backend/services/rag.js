@@ -108,7 +108,7 @@ setInterval(() => {
 // so they can be answered without going through the RAG pipeline.
 // ---------------------------------------------------------------------------
 const GREETING_PATTERNS = /^(hi|hello|hey|howdy|greetings|good\s*(morning|afternoon|evening|day)|what'?s\s*up|sup|yo)\b/i;
-const META_PATTERNS = /\b(what (can|do) you do|how (do|can) (i|you)|what are you|who are you|help me|what is (this|docchat)|how does (this|docchat) work|what('?s| is) docchat)\b/i;
+const META_PATTERNS = /\b(what (can|do)? ?you do|how (do|can) (i|you)|what are you|who are you|help me|what is (this|docchat)|how does (this|docchat) work|what('?s| is) docchat|tell me about (yourself|you)|what('?s| is) your (purpose|function|job|role))\b/i;
 const THANKS_PATTERNS = /^(thanks?|thank you|thx|ty|cheers|great|awesome|perfect|nice|cool|ok|okay|got it|understood|sure)\b/i;
 
 function detectConversationalIntent(query) {
