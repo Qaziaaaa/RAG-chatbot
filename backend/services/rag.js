@@ -103,8 +103,43 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 // ---------------------------------------------------------------------------
-// RAG configuration
+// Conversational intent detection
+// Detects greetings, meta-questions about the app, and simple chitchat
+// so they can be answered without going through the RAG pipeline.
 // ---------------------------------------------------------------------------
+const GREETING_PATTERNS = /^(hi|hello|hey|howdy|greetings|good\s*(morning|afternoon|evening|day)|what'?s\s*up|sup|yo)\b/i;
+const META_PATTERNS = /\b(what (can|do) you do|how (do|can) (i|you)|what are you|who are you|help me|what is (this|docchat)|how does (this|docchat) work|what('?s| is) docchat)\b/i;
+const THANKS_PATTERNS = /^(thanks?|thank you|thx|ty|cheers|great|awesome|perfect|nice|cool|ok|okay|got it|understood|sure)\b/i;
+
+function detectConversationalIntent(query) {
+    const q = query.trim().toLowerCase();
+    if (GREETING_PATTERNS.test(q)) return 'greeting';
+    if (META_PATTERNS.test(q)) return 'meta';
+    if (THANKS_PATTERNS.test(q)) return 'thanks';
+    return null;
+}
+
+function getConversationalResponse(intent) {
+    if (intent === 'greeting') {
+        return "Hello! I'm DocChat, your AI document assistant. Upload any PDF, text file, or code file using the panel on the left, then ask me anything about it — I'll find the answer from your documents and show you exactly where it came from.";
+    }
+    if (intent === 'meta') {
+        return `I'm **DocChat** — an AI assistant that answers questions based on documents you upload.
+
+Here's what I can do:
+- **Summarize** any document you upload
+- **Answer questions** about the content of your files
+- **Explain code** from uploaded source files
+- **Find specific information** across multiple documents
+- **Cite sources** — every answer shows which document it came from
+
+**To get started:** Upload a file using the panel on the left (PDF, TXT, MD, JSON, or code files), then ask me anything about it.`;
+    }
+    if (intent === 'thanks') {
+        return "You're welcome! Feel free to ask anything else about your documents.";
+    }
+    return null;
+}
 const CONFIG = {
     MIN_SIMILARITY:      0.35,
     MAX_TOP_K:           7,
@@ -419,7 +454,17 @@ export async function queryRAG(userQuery, options = {}) {
     try {
         console.log(`🔍 RAG Query [${mode}]: "${userQuery.substring(0, 60)}..."`);
 
-        console.log('  1. Generating query embedding...');
+        // Step 0: Handle greetings and meta-questions without RAG
+        const intent = detectConversationalIntent(userQuery);
+        if (intent) {
+            const response = getConversationalResponse(intent);
+            if (sessionId) appendAndTrimHistory(sessionId, userQuery, response);
+            return {
+                answer: response,
+                sources: [],
+                metadata: { retrievalTime: 0, chunksRetrieved: 0, confidence: 1, mode, conversational: true }
+            };
+        }
         const queryEmbedding = await getEmbeddingWithCache(userQuery);
         if (!queryEmbedding || queryEmbedding.length !== 768) {
             throw new Error('Failed to generate valid query embedding (expected 768-dim)');
@@ -520,7 +565,15 @@ export async function streamRAG(userQuery, options = {}, { onToken, onSources, o
     try {
         console.log(`🔍 Stream RAG [${mode}]: "${userQuery.substring(0, 60)}..."`);
 
-        // Steps 1-3 are identical to queryRAG — retrieval is not streamed
+        // Step 0: Handle greetings and meta-questions without RAG
+        const intent = detectConversationalIntent(userQuery);
+        if (intent) {
+            const response = getConversationalResponse(intent);
+            onSources([], { confidence: 1, contextTokens: 0, mode, conversational: true });
+            onToken(response);
+            if (sessionId) appendAndTrimHistory(sessionId, userQuery, response);
+            return;
+        }
         const queryEmbedding = await getEmbeddingWithCache(userQuery);
         if (!queryEmbedding || queryEmbedding.length !== 768) {
             throw new Error('Failed to generate valid query embedding');
@@ -529,8 +582,14 @@ export async function streamRAG(userQuery, options = {}, { onToken, onSources, o
         const relevantChunks = await searchRelevantChunks(queryEmbedding, options);
         const { context, tokenCount, confidence } = formatContext(relevantChunks);
 
-        // Send sources to the client immediately after retrieval
-        // WHY: The user can start reading source cards while the answer streams in
+        // Only send sources if we actually have useful context
+        // (don't show sources when the answer is "I don't have enough info")
+        if (context === 'NO_RELEVANT_CONTEXT' || confidence < CONFIG.MIN_SIMILARITY) {
+            onSources([], { confidence: 0, contextTokens: 0, mode });
+            onToken("I don't have enough information in the provided documents to answer that question. Try uploading a relevant file first.");
+            return;
+        }
+
         const sources = relevantChunks.map((c, i) => ({
             sourceNumber: i + 1,
             document: c.document_title || c.document_id || 'Unknown document',
@@ -538,11 +597,6 @@ export async function streamRAG(userQuery, options = {}, { onToken, onSources, o
             relevance: Math.round((c.finalScore || c.similarity || 0) * 100),
         }));
         onSources(sources, { confidence, contextTokens: tokenCount, mode });
-
-        if (context === 'NO_RELEVANT_CONTEXT' || confidence < CONFIG.MIN_SIMILARITY) {
-            onToken("I don't have enough information in the provided documents to answer that question. Try uploading relevant documentation or source files.");
-            return;
-        }
 
         const systemPrompt = buildRAGSystemPrompt(context, confidence, mode);
         const history = getHistory(sessionId);

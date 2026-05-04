@@ -1090,7 +1090,14 @@ body {
 }
 .select-all-btn:hover { color: #a5f3fc; }
 
-.doc-loading {
+.doc-scope-hint {
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 0 0 4px;
+  min-height: 16px;
+}
   padding: 20px;
   text-align: center;
   font-family: var(--font-body);

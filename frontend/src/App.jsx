@@ -463,6 +463,11 @@ function DocumentLibrary({ selectedIds, onToggle, refreshTrigger, userId, access
           docs.forEach(d => { if (allSelected ? selectedIds.includes(d.id) : !selectedIds.includes(d.id)) onToggle(d.id); })
         }>{allSelected ? 'Deselect all' : 'Select all'}</button>
       </div>
+      <p className="doc-scope-hint">
+        {selectedIds.length === 0
+          ? 'Searching all docs — check boxes to narrow'
+          : null}
+      </p>
       {docs.map(doc => {
         const sel = selectedIds.includes(doc.id);
         return (
