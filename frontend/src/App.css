@@ -1098,6 +1098,7 @@ body {
   padding: 0 0 4px;
   min-height: 16px;
 }
+.doc-loading {
   padding: 20px;
   text-align: center;
   font-family: var(--font-body);
