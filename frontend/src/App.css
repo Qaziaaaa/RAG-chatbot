@@ -1158,6 +1158,10 @@ body {
   margin-top: 2px;
   white-space: normal;
 }
+.doc-no-sections {
+  color: #f87171; /* Red warning color */
+  font-style: italic;
+}
 
 .doc-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .doc-actions input[type="checkbox"] {

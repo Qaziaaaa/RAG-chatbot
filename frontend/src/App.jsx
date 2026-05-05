@@ -487,7 +487,7 @@ function DocumentLibrary({ selectedIds, onToggle, refreshTrigger, userId, access
             <div className="doc-info">
               <span className="doc-title">{doc.title}</span>
               <span className="doc-meta">
-                {doc.chunkCount > 0 ? `${doc.chunkCount} sections` : 'Processing…'}
+                {doc.chunkCount > 0 ? `${doc.chunkCount} sections` : <span className="doc-no-sections">No sections</span>}
                 {doc.file_size ? ` · ${formatBytes(doc.file_size)}` : ''}
                 {doc.created_at ? ` · ${formatDate(doc.created_at)}` : ''}
               </span>
