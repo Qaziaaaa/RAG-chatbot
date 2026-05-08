@@ -652,7 +652,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [mode, setMode] = useState('normal');
   const [selectedDocIds, setSelectedDocIds] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 640);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const messagesEndRef = useRef(null);

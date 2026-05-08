@@ -1533,6 +1533,11 @@ body {
 
 @media (max-width: 640px) {
 
+  /* Always show sidebar toggle on mobile */
+  .sidebar-toggle {
+    display: flex !important;
+  }
+
   /* ── Sidebar: full-screen overlay on mobile ── */
   .sidebar {
     position: fixed;
