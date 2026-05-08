@@ -176,13 +176,12 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: rgba(2, 6, 23, 0.60);
+  background: rgba(2, 6, 23, 0.95);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-right: 1px solid var(--border-base);
   transition: width 0.22s ease, min-width 0.22s ease;
   flex-shrink: 0;
-  /* height fills the layout row, not the full viewport */
   min-height: 0;
 }
 
@@ -1528,225 +1527,130 @@ body {
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   MOBILE RESPONSIVE — full overhaul for screens under 640px
+   MOBILE RESPONSIVE
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Back to chat button — hidden on desktop, shown on mobile */
+.sidebar-back-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: var(--cyan);
+  border: none;
+  color: #000;
+  font-family: var(--font-body);
+  font-size: 0.80rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+.sidebar-back-btn:hover { background: #a5f3fc; }
 
 @media (max-width: 640px) {
 
-  /* Always show sidebar toggle on mobile */
-  .sidebar-toggle {
-    display: flex !important;
-  }
-
-  /* ── Sidebar: full-screen overlay on mobile ── */
+  /* ── Sidebar: fixed full-screen overlay, NOT in flex flow ── */
   .sidebar {
-    position: fixed;
+    position: fixed !important;
     top: 0;
-    left: 0;
-    height: 100dvh;
-    z-index: 50;
-    width: 0 !important;
-    min-width: 0 !important;
-    transition: width 0.25s ease, min-width 0.25s ease;
-  }
-
-  .layout.sidebar-open .sidebar {
+    left: -100vw;           /* hidden off-screen by default */
     width: 100vw !important;
     min-width: 100vw !important;
+    height: 100dvh;
+    z-index: 200;
+    transition: left 0.25s ease;
+    overflow-y: auto;
   }
 
-  /* Dim the chat behind the sidebar when open */
-  .layout.sidebar-open .chat-panel::after {
-    content: '';
+  /* When open: slide in */
+  .layout.sidebar-open .sidebar {
+    left: 0 !important;
+  }
+
+  /* Backdrop behind sidebar */
+  .sidebar-backdrop {
+    display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.60);
-    z-index: 49;
-    pointer-events: none;
+    background: rgba(0,0,0,0.6);
+    z-index: 199;
   }
 
-  /* ── Header: compact on mobile ── */
+  /* Show back button, hide X */
+  .sidebar-back-btn { display: flex; }
+  .sidebar-close { display: none; }
+
+  /* Always show the docs toggle button in header */
+  .sidebar-toggle { display: flex !important; }
+
+  /* ── Header ── */
   .chat-header {
-    padding: 0 10px;
+    padding: 0 12px;
     gap: 8px;
     height: 52px;
   }
 
-  /* Hide the long header name text on mobile — too wide */
   .header-name {
     font-size: 0.78rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 120px;
-  }
-
-  /* Hide status text on very small screens */
-  .header-status {
-    display: none;
-  }
-
-  /* Shrink auth button */
-  .auth-action-btn {
-    font-size: 0.72rem;
-    padding: 4px 10px;
-  }
-
-  /* Shrink username display */
-  .header-user {
-    max-width: 70px;
-    font-size: 0.72rem;
-  }
-
-  /* ── Messages area: tighter padding ── */
-  .messages-area {
-    padding: 14px 10px 10px;
-    gap: 14px;
-  }
-
-  /* Full width message bubbles on mobile */
-  .message-group.user,
-  .message-group.bot {
-    max-width: 95%;
-  }
-
-  /* ── Input section: compact ── */
-  .input-section {
-    padding: 8px 10px 10px;
-  }
-
-  /* Mode toggle: hide labels, show only icons on mobile */
-  .mode-btn {
-    padding: 4px 8px;
-    font-size: 0.72rem;
-    gap: 3px;
-  }
-
-  /* Hide mode hint text on mobile — not enough space */
-  .mode-hint {
-    display: none;
-  }
-
-  /* ── Footer: smaller on mobile ── */
-  .app-footer {
-    padding: 0 10px;
-    font-size: 0.65rem;
-  }
-
-  /* ── Source panel: full width ── */
-  .source-panel-wrapper {
-    padding-left: 0;
-  }
-
-  /* ── Auth modal: full width on mobile ── */
-  .auth-modal {
-    padding: 24px 16px 20px;
-    max-width: 100%;
-  }
-}
-
-/* ── Tablet: 641px–900px ── */
-@media (min-width: 641px) and (max-width: 900px) {
-  :root {
-    --sidebar-w: 260px;
-  }
-
-  .header-name {
-    font-size: 0.82rem;
-  }
-
-  .message-group.user,
-  .message-group.bot {
-    max-width: 90%;
-  }
-}
-
-/* ── Sidebar back button — mobile only ──────────────────────────────────── */
-.sidebar-back-btn {
-  display: none; /* hidden on desktop */
-  align-items: center;
-  gap: 5px;
-  background: rgba(34, 211, 238, 0.08);
-  border: 1px solid var(--border-cyan);
-  color: var(--text-cyan);
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 5px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.12s;
-  white-space: nowrap;
-}
-.sidebar-back-btn:hover { background: rgba(34, 211, 238, 0.15); }
-
-@media (max-width: 640px) {
-  /* Show back button on mobile */
-  .sidebar-back-btn {
-    display: flex;
-  }
-
-  /* Hide the X close button on mobile — back button replaces it */
-  .sidebar-close {
-    display: none;
-  }
-
-  /* Header name — truncate cleanly */
-  .header-name {
-    font-size: 0.75rem;
-    max-width: 100px;
+    max-width: 130px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  /* Header info block — don't let it grow too wide */
+  .header-status { display: none; }
+
   .header-info {
     flex: 1;
     min-width: 0;
     overflow: hidden;
   }
 
-  /* Avatar — smaller on mobile */
-  .header-avatar svg {
-    width: 18px;
-    height: 18px;
+  .auth-action-btn {
+    font-size: 0.72rem;
+    padding: 4px 10px;
   }
 
-  /* Mode buttons — icon only on very small screens */
-  .mode-btn {
-    padding: 5px 8px;
-    font-size: 0.70rem;
-    border-radius: 12px;
+  .header-user {
+    max-width: 80px;
+    font-size: 0.72rem;
   }
 
-  /* Input toolbar — stack if needed */
-  .input-toolbar {
-    flex-wrap: wrap;
-    gap: 6px;
+  /* ── Messages ── */
+  .messages-area {
+    padding: 14px 10px 10px;
+    gap: 14px;
   }
 
-  /* Message bubbles — full width */
   .message-group.user,
   .message-group.bot {
-    max-width: 98%;
+    max-width: 96%;
   }
 
-  /* Bubble text — slightly smaller */
   .bubble {
-    font-size: 0.85rem;
+    font-size: 0.875rem;
     padding: 10px 12px;
   }
 
-  /* Source panel — no left indent on mobile */
-  .source-panel-wrapper {
-    padding-left: 0;
-  }
+  /* ── Input ── */
+  .input-section { padding: 8px 10px 10px; }
+  .mode-btn { padding: 5px 9px; font-size: 0.72rem; }
+  .mode-hint { display: none; }
 
-  /* Sidebar header — wrap if needed */
-  .sidebar-header {
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 12px 12px 8px;
-  }
+  /* ── Source panel ── */
+  .source-panel-wrapper { padding-left: 0; }
+
+  /* ── Footer ── */
+  .app-footer { padding: 0 10px; font-size: 0.65rem; }
+
+  /* ── Auth modal ── */
+  .auth-modal { padding: 24px 16px 20px; }
+}
+
+/* ── Tablet ── */
+@media (min-width: 641px) and (max-width: 900px) {
+  :root { --sidebar-w: 260px; }
+  .message-group.user, .message-group.bot { max-width: 90%; }
 }

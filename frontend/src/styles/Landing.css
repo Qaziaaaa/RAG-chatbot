@@ -908,6 +908,7 @@
   justify-content: center;
   transition: border-color 0.15s, color 0.15s;
   flex-shrink: 0;
+  margin-left: auto;  /* pushes it to the far right */
 }
 .nav-hamburger:hover {
   border-color: var(--border-cyan);
@@ -956,24 +957,26 @@
 .nav-mobile-cta:hover { background: #a5f3fc; }
 
 @media (max-width: 640px) {
-  /* Show hamburger, hide desktop links and CTA */
+  /* Show hamburger on far right, hide desktop nav */
   .nav-hamburger { display: flex; }
   .nav-links { display: none !important; }
   .nav-cta { display: none; }
 
-  /* Tighter nav on mobile */
   .nav-inner {
     padding: 0 16px;
-    gap: 12px;
+    gap: 0;
+    justify-content: space-between;
   }
 
-  /* Hero text sizing — prevent overflow */
+  /* Hero text — scale down cleanly */
   .hero-title {
-    font-size: clamp(1.8rem, 8vw, 2.8rem);
+    font-size: clamp(1.9rem, 8vw, 2.8rem);
   }
 
   .hero-subtitle {
     font-size: 0.95rem;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .hero {
@@ -981,7 +984,10 @@
     flex-direction: column;
     text-align: center;
     gap: 40px;
+    align-items: center;
   }
+
+  .hero-inner { max-width: 100%; }
 
   .hero-actions {
     justify-content: center;
@@ -1000,14 +1006,21 @@
     gap: 16px;
   }
 
-  /* Hide hero visual on very small screens */
+  /* Keep hero visual but make it smaller */
   .hero-visual {
-    display: none;
+    max-width: 100%;
+    width: 100%;
+    padding: 10px 0 30px;
   }
 
-  .section {
-    padding: 60px 16px;
+  .mock-window {
+    transform: none;
   }
+  .mock-window:hover {
+    transform: none;
+  }
+
+  .section { padding: 60px 16px; }
 
   .section-title {
     font-size: clamp(1.4rem, 6vw, 2rem);
@@ -1019,14 +1032,9 @@
   }
 
   .step-arrow { display: none; }
+  .features-grid { grid-template-columns: 1fr; }
 
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .pricing-card {
-    padding: 24px 16px;
-  }
+  .pricing-card { padding: 24px 16px; }
 
   .landing-footer-inner {
     flex-direction: column;
@@ -1034,7 +1042,5 @@
     gap: 12px;
   }
 
-  .footer-links {
-    justify-content: center;
-  }
+  .footer-links { justify-content: center; }
 }
