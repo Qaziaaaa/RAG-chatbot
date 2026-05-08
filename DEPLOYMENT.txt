@@ -1,0 +1,366 @@
+================================================================
+  RAG CHATBOT — STEP BY STEP DEPLOYMENT GUIDE
+  Backend: Render   |   Frontend: Vercel   |   DB: Supabase
+================================================================
+
+WHAT YOU NEED BEFORE STARTING
+-------------------------------
+1. A GitHub account with this project pushed to a repo
+2. A Supabase account (free) — supabase.com
+3. A Groq account (free) — console.groq.com/keys
+4. A Jina AI account (free) — jina.ai/api-dashboard/key-manager
+5. A Render account (free) — render.com
+6. A Vercel account (free) — vercel.com
+
+Keep a notepad open. You will collect several keys and URLs
+as you go through these steps.
+
+================================================================
+PART 1 — SUPABASE DATABASE SETUP
+================================================================
+
+STEP 1 — Create a Supabase project
+------------------------------------
+1. Go to supabase.com and sign in
+2. Click "New project"
+3. Give it a name like "rag-chatbot"
+4. Choose a region close to you
+5. Set a database password (save it somewhere)
+6. Click "Create new project"
+7. Wait about 2 minutes for it to finish setting up
+
+STEP 2 — Run the database migrations
+--------------------------------------
+1. In your Supabase dashboard, click "SQL Editor" in the left sidebar
+2. Click "New query"
+3. Open the file backend/database/schema.sql from your project
+4. Copy ALL the text from that file and paste it into the SQL editor
+5. Click "Run" (green button)
+6. You should see "Success. No rows returned"
+
+7. Click "New query" again
+8. Open backend/database/schema_v2_migration.sql
+9. Copy ALL the text, paste it, click Run
+
+10. Click "New query" again
+11. Open backend/database/schema_v3_migration.sql
+12. Copy ALL the text, paste it, click Run
+
+If any step shows an error, check that you ran them in order
+(schema.sql first, then v2, then v3).
+
+STEP 3 — Collect your Supabase keys
+-------------------------------------
+1. In Supabase, click "Settings" (gear icon) in the left sidebar
+2. Click "API"
+3. You will see three values — copy all three to your notepad:
+
+   SUPABASE_URL = the "Project URL" (looks like https://abcxyz.supabase.co)
+   SUPABASE_ANON_KEY = the "anon public" key (long string starting with eyJ)
+   SUPABASE_SERVICE_ROLE_KEY = the "service_role" key (another long eyJ string)
+
+   WARNING: Never share the service_role key. It has full database access.
+
+================================================================
+PART 2 — GET YOUR API KEYS
+================================================================
+
+STEP 4 — Get a Groq API key
+-----------------------------
+1. Go to console.groq.com/keys
+2. Sign in or create a free account
+3. Click "Create API Key"
+4. Give it a name like "rag-chatbot"
+5. Copy the key to your notepad as: GROQ_API_KEY
+
+STEP 5 — Get a Jina AI API key
+--------------------------------
+1. Go to jina.ai/api-dashboard/key-manager
+2. Sign in or create a free account
+3. Create a new API key
+4. Copy it to your notepad as: JINA_API_KEY
+
+================================================================
+PART 3 — DEPLOY THE BACKEND TO RENDER
+================================================================
+
+STEP 6 — Push your code to GitHub
+-----------------------------------
+Open a terminal in your project folder and run:
+
+   git add .
+   git commit -m "ready for deployment"
+   git push origin main
+
+Make sure backend/.env and frontend/.env are NOT committed.
+The .gitignore file already excludes them.
+
+STEP 7 — Create a Render account and connect GitHub
+-----------------------------------------------------
+1. Go to render.com and sign up
+2. Click "New +" in the top right
+3. Select "Web Service"
+4. Click "Connect account" next to GitHub
+5. Authorize Render to access your repositories
+6. Find your repo in the list and click "Connect"
+
+STEP 8 — Configure the Render web service
+-------------------------------------------
+Fill in these fields on the setup screen:
+
+   Name:           rag-chatbot-backend
+   Region:         Choose one close to you
+   Branch:         main
+   Root Directory: backend
+   Runtime:        Node
+   Build Command:  npm install
+   Start Command:  npm start
+
+Leave everything else as default.
+
+STEP 9 — Add environment variables on Render
+---------------------------------------------
+Scroll down to the "Environment Variables" section.
+Click "Add Environment Variable" for each one:
+
+   Key: NODE_ENV              Value: production
+   Key: GROQ_API_KEY          Value: (paste from your notepad)
+   Key: LLM_MODEL             Value: llama-3.1-8b-instant
+   Key: SUPABASE_URL          Value: (paste from your notepad)
+   Key: SUPABASE_ANON_KEY     Value: (paste from your notepad)
+   Key: SUPABASE_SERVICE_ROLE_KEY  Value: (paste from your notepad)
+   Key: JINA_API_KEY          Value: (paste from your notepad)
+   Key: ALLOWED_ORIGINS       Value: (leave blank for now — you will fill this after Vercel)
+
+STEP 10 — Deploy the backend
+------------------------------
+1. Click "Create Web Service" at the bottom
+2. Render will start building. This takes 2-4 minutes.
+3. Watch the logs — you should see:
+      Server running on http://localhost:XXXX
+      Supabase connected successfully
+4. Once it says "Live", copy your Render URL to your notepad.
+   It looks like: https://rag-chatbot-backend.onrender.com
+
+STEP 11 — Test the backend
+----------------------------
+Open your browser and go to:
+   https://YOUR-RENDER-URL.onrender.com/api/health
+
+You should see something like:
+   {"status":"ok","database":"connected","llm":"configured"}
+
+If you see that, the backend is working. Move on.
+If you see an error, check the Render logs for which env var is missing.
+
+================================================================
+PART 4 — CONFIGURE THE FRONTEND FOR PRODUCTION
+================================================================
+
+STEP 12 — Update vercel.json with your Render URL
+---------------------------------------------------
+1. Open the file frontend/vercel.json in your code editor
+2. Find this line:
+      "destination": "https://REPLACE_WITH_YOUR_RENDER_URL/api/:path*"
+3. Replace REPLACE_WITH_YOUR_RENDER_URL with your actual Render URL
+   Example:
+      "destination": "https://rag-chatbot-backend.onrender.com/api/:path*"
+4. Save the file
+
+STEP 13 — Commit and push the change
+--------------------------------------
+   git add frontend/vercel.json
+   git commit -m "set Render backend URL in vercel.json"
+   git push origin main
+
+================================================================
+PART 5 — DEPLOY THE FRONTEND TO VERCEL
+================================================================
+
+STEP 14 — Create a Vercel account and import your project
+----------------------------------------------------------
+1. Go to vercel.com and sign up (use GitHub to sign in — easiest)
+2. Click "Add New..." then "Project"
+3. Find your GitHub repo and click "Import"
+
+STEP 15 — Configure the Vercel project
+----------------------------------------
+On the configuration screen:
+
+   Framework Preset:  Vite  (Vercel detects this automatically)
+   Root Directory:    frontend   <-- IMPORTANT: click "Edit" and type "frontend"
+   Build Command:     npm run build
+   Output Directory:  dist
+
+STEP 16 — Add environment variables on Vercel
+----------------------------------------------
+Scroll down to "Environment Variables" and add:
+
+   Key: VITE_SUPABASE_URL       Value: (your Supabase URL from notepad)
+   Key: VITE_SUPABASE_ANON_KEY  Value: (your Supabase anon key from notepad)
+
+Note: Do NOT add the service_role key here. That is backend-only.
+
+STEP 17 — Deploy the frontend
+-------------------------------
+1. Click "Deploy"
+2. Vercel builds and deploys in about 1-2 minutes
+3. Once done, copy your Vercel URL to your notepad.
+   It looks like: https://rag-chatbot.vercel.app
+
+================================================================
+PART 6 — CONNECT EVERYTHING TOGETHER
+================================================================
+
+STEP 18 — Update CORS on Render
+---------------------------------
+1. Go back to render.com
+2. Open your web service
+3. Click "Environment" in the left sidebar
+4. Find ALLOWED_ORIGINS and click the edit (pencil) icon
+5. Set the value to your Vercel URL:
+      https://rag-chatbot.vercel.app
+6. Click "Save Changes"
+7. Render will automatically redeploy (takes 1-2 minutes)
+
+STEP 19 — Update Supabase Auth settings
+-----------------------------------------
+1. Go to your Supabase dashboard
+2. Click "Authentication" in the left sidebar
+3. Click "URL Configuration"
+4. Set "Site URL" to your Vercel URL:
+      https://rag-chatbot.vercel.app
+5. Under "Redirect URLs", click "Add URL" and add:
+      https://rag-chatbot.vercel.app/**
+6. Click "Save"
+
+This makes email confirmation links and login redirects work correctly.
+
+================================================================
+PART 7 — FINAL TEST
+================================================================
+
+STEP 20 — Test the full app
+-----------------------------
+Open your Vercel URL in a browser and check each of these:
+
+   [ ] The app loads without a blank screen
+   [ ] Click "Sign up" — create a test account with your email
+   [ ] Check your email for a confirmation link and click it
+   [ ] Log in with your email and password
+   [ ] Upload a small text file or PDF using the left panel
+   [ ] Wait for it to say "X sections ready"
+   [ ] Type a question about the file and press Enter
+   [ ] The answer should stream in word by word
+   [ ] Source citations should appear below the answer
+   [ ] Click the delete button on the document — it should disappear
+   [ ] Click "Sign out" — the document list should clear
+
+If all of those work, your deployment is complete.
+
+================================================================
+PART 8 — KEEP-ALIVE SETUP (IMPORTANT FOR FREE TIER)
+================================================================
+
+STEP 21 — Prevent Supabase from pausing
+-----------------------------------------
+Supabase free projects pause after 7 days of no activity.
+The backend already pings the database every 3 days when running,
+but Render free tier also sleeps after 15 minutes of no traffic.
+
+Set up a free external ping to keep both awake:
+
+1. Go to cron-job.org and create a free account
+2. Click "Create cronjob"
+3. URL: https://YOUR-RENDER-URL.onrender.com/api/health
+4. Schedule: Every 14 minutes
+5. Save it
+
+This keeps Render awake and the Supabase ping running.
+
+================================================================
+TROUBLESHOOTING
+================================================================
+
+PROBLEM: Backend shows "Missing required environment variables"
+SOLUTION: Go to Render > Environment and check all 4 required
+          vars are set: GROQ_API_KEY, SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY, JINA_API_KEY
+
+PROBLEM: Frontend shows "Could not reach the server"
+SOLUTION: Check frontend/vercel.json has the correct Render URL.
+          Also check ALLOWED_ORIGINS on Render matches your
+          Vercel URL exactly (no trailing slash).
+
+PROBLEM: Uploads fail or get stuck on "processing"
+SOLUTION: Check Render logs for embedding errors.
+          Make sure JINA_API_KEY is set correctly.
+
+PROBLEM: Login emails not arriving
+SOLUTION: Check spam folder. Also verify Supabase > Authentication
+          > URL Configuration has your Vercel URL as Site URL.
+
+PROBLEM: "Project paused" error from Supabase
+SOLUTION: Go to supabase.com, open your project, click
+          "Restore project". Then set up the cron-job.org ping.
+
+PROBLEM: App loads but shows blank white screen
+SOLUTION: Open browser DevTools (F12) > Console tab.
+          Check for missing VITE_ environment variables.
+          Redeploy on Vercel after adding them.
+
+================================================================
+YOUR KEYS CHECKLIST (fill this in as you go)
+================================================================
+
+SUPABASE_URL              = ______________________________
+SUPABASE_ANON_KEY         = ______________________________
+SUPABASE_SERVICE_ROLE_KEY = ______________________________
+GROQ_API_KEY              = ______________________________
+JINA_API_KEY              = ______________________________
+RENDER_URL                = ______________________________
+VERCEL_URL                = ______________________________
+
+================================================================
+FOLDER STRUCTURE AFTER DEPLOYMENT
+================================================================
+
+Your repo root should look like this:
+
+   RAG-chatbot/
+   |
+   +-- render.yaml          <-- Render reads this to configure the backend
+   +-- .gitignore           <-- keeps .env files out of git
+   +-- package.json         <-- root scripts (dev only)
+   +-- README.md
+   +-- DEPLOYMENT.txt       <-- this file
+   |
+   +-- backend/             <-- Render deploys THIS folder
+   |   +-- server.js
+   |   +-- package.json     <-- has "start": "node server.js"
+   |   +-- .env.example     <-- template (not the real .env)
+   |   +-- config/
+   |   +-- routes/
+   |   +-- services/
+   |   +-- database/
+   |   +-- knowledge/
+   |
+   +-- frontend/            <-- Vercel deploys THIS folder
+       +-- vercel.json      <-- tells Vercel to proxy /api to Render
+       +-- vite.config.js
+       +-- package.json     <-- has "build": "vite build"
+       +-- index.html
+       +-- .env.example     <-- template (not the real .env)
+       +-- public/
+       |   +-- _redirects   <-- SPA routing fallback
+       +-- src/
+           +-- App.jsx
+           +-- App.css
+           +-- Landing.jsx
+           +-- Landing.css
+           +-- supabase.js
+           +-- main.jsx
+
+================================================================
+END OF DEPLOYMENT GUIDE
+================================================================

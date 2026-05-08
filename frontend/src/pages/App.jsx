@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Markdown from 'react-markdown';
-import { supabase } from './supabase.js';
-import './App.css';
+import { supabase } from '../lib/supabase.js';
+import '../styles/App.css';
 
 // ── Session ID — resets on tab close (for conversation memory only) ─────────
 const SESSION_ID = (() => {

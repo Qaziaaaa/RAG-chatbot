@@ -2,6 +2,9 @@
   "name": "chatbot-frontend",
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -16,12 +19,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
-    "concurrently": "^9.2.1",
     "vite": "^5.0.0"
   },
-  "description": "",
-  "main": "vite.config.js",
-  "keywords": [],
-  "author": "",
   "license": "ISC"
 }
