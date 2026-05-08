@@ -205,6 +205,20 @@ export async function getDocumentWithChunks(documentId, userId = null) {
 export async function deleteDocument(documentId, userId = null) {
     console.log(`🗑️ Deleting document: ${documentId} (user: ${userId || 'anonymous'})`);
 
+    // First verify the document exists and belongs to this user (or has no owner)
+    let query = supabase.from('documents').select('id, user_id').eq('id', documentId);
+    const { data: doc, error: fetchErr } = await query.single();
+
+    if (fetchErr || !doc) {
+        throw new Error('Document not found');
+    }
+
+    // Allow delete if: no userId filter, doc has no owner, or userId matches
+    const canDelete = !userId || !doc.user_id || doc.user_id === userId;
+    if (!canDelete) {
+        throw new Error('Not authorized to delete this document');
+    }
+
     // Explicitly delete chunks first as a safety net
     // (ON DELETE CASCADE should handle this, but belt-and-suspenders)
     const { error: chunkErr } = await supabase
@@ -215,21 +229,8 @@ export async function deleteDocument(documentId, userId = null) {
         console.warn('⚠️ Could not delete chunks explicitly:', chunkErr.message);
     }
 
-    let query = supabase.from('documents').delete().eq('id', documentId);
-    if (userId) query = query.eq('user_id', userId);
-
-    const { error } = await query;
-
-    if (error) {
-        // If user_id column missing, retry without ownership check
-        if (error.message?.includes('user_id') || error.code === '42703') {
-            console.warn('⚠️  user_id column missing — deleting without ownership check.');
-            const { error: e2 } = await supabase.from('documents').delete().eq('id', documentId);
-            if (e2) throw e2;
-        } else {
-            throw error;
-        }
-    }
+    const { error } = await supabase.from('documents').delete().eq('id', documentId);
+    if (error) throw error;
 
     console.log('  ✓ Document and chunks deleted');
     return { deleted: true, documentId };
