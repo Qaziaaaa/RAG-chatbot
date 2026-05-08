@@ -1525,3 +1525,133 @@ body {
     z-index: 30;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — full overhaul for screens under 640px
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+
+  /* ── Sidebar: full-screen overlay on mobile ── */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100dvh;
+    z-index: 50;
+    width: 0 !important;
+    min-width: 0 !important;
+    transition: width 0.25s ease, min-width 0.25s ease;
+  }
+
+  .layout.sidebar-open .sidebar {
+    width: 100vw !important;
+    min-width: 100vw !important;
+  }
+
+  /* Dim the chat behind the sidebar when open */
+  .layout.sidebar-open .chat-panel::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.60);
+    z-index: 49;
+    pointer-events: none;
+  }
+
+  /* ── Header: compact on mobile ── */
+  .chat-header {
+    padding: 0 10px;
+    gap: 8px;
+    height: 52px;
+  }
+
+  /* Hide the long header name text on mobile — too wide */
+  .header-name {
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+
+  /* Hide status text on very small screens */
+  .header-status {
+    display: none;
+  }
+
+  /* Shrink auth button */
+  .auth-action-btn {
+    font-size: 0.72rem;
+    padding: 4px 10px;
+  }
+
+  /* Shrink username display */
+  .header-user {
+    max-width: 70px;
+    font-size: 0.72rem;
+  }
+
+  /* ── Messages area: tighter padding ── */
+  .messages-area {
+    padding: 14px 10px 10px;
+    gap: 14px;
+  }
+
+  /* Full width message bubbles on mobile */
+  .message-group.user,
+  .message-group.bot {
+    max-width: 95%;
+  }
+
+  /* ── Input section: compact ── */
+  .input-section {
+    padding: 8px 10px 10px;
+  }
+
+  /* Mode toggle: hide labels, show only icons on mobile */
+  .mode-btn {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    gap: 3px;
+  }
+
+  /* Hide mode hint text on mobile — not enough space */
+  .mode-hint {
+    display: none;
+  }
+
+  /* ── Footer: smaller on mobile ── */
+  .app-footer {
+    padding: 0 10px;
+    font-size: 0.65rem;
+  }
+
+  /* ── Source panel: full width ── */
+  .source-panel-wrapper {
+    padding-left: 0;
+  }
+
+  /* ── Auth modal: full width on mobile ── */
+  .auth-modal {
+    padding: 24px 16px 20px;
+    max-width: 100%;
+  }
+}
+
+/* ── Tablet: 641px–900px ── */
+@media (min-width: 641px) and (max-width: 900px) {
+  :root {
+    --sidebar-w: 260px;
+  }
+
+  .header-name {
+    font-size: 0.82rem;
+  }
+
+  .message-group.user,
+  .message-group.bot {
+    max-width: 90%;
+  }
+}
