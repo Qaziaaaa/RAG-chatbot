@@ -1405,3 +1405,123 @@ body {
   .mode-btn span:last-child { display: none; }
   .app-footer { padding-left: 16px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   APP FOOTER
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: var(--footer-h);
+  background: var(--surface-header);
+  border-top: 1px solid var(--border-base);
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 0.70rem;
+  color: var(--text-muted);
+}
+
+.footer-left { letter-spacing: 0.03em; }
+
+.footer-right {
+  display: flex;
+  gap: 14px;
+}
+
+.footer-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+.footer-link:hover { color: var(--text-secondary); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SOURCE PANEL — continued (header padding fix)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.source-header {
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  text-align: left;
+  gap: 6px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  transition: background 0.12s;
+}
+.source-header:hover { background: var(--cyan-glow-soft); }
+
+.source-num {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-cyan);
+  flex-shrink: 0;
+}
+
+.source-doc {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.source-relevance {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--emerald);
+  flex-shrink: 0;
+}
+
+.source-chevron {
+  font-family: var(--font-mono);
+  font-size: 0.60rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.relevance-track {
+  height: 2px;
+  background: var(--border-base);
+  margin: 0 10px;
+}
+
+.relevance-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+  transition: width 0.3s ease;
+}
+
+.source-snippet {
+  padding: 8px 10px 10px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-base);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — mobile sidebar overlay
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  :root { --sidebar-w: 100vw; }
+
+  .layout.sidebar-open .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 30;
+  }
+}

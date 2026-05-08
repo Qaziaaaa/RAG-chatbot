@@ -369,7 +369,7 @@ Answer the user's latest message following the style and grounding rules above.`
 // LLM call — history-aware, mode-aware (non-streaming, kept for fallback)
 // ---------------------------------------------------------------------------
 async function getChatResponseWithPrompt(userMessage, systemPrompt, history = [], mode = 'normal') {
-    const { default: OpenAI } = await import('openai');
+    const OpenAI = (await import('openai')).default;
     const groq = new OpenAI({
         apiKey: process.env.GROQ_API_KEY,
         baseURL: 'https://api.groq.com/openai/v1'
@@ -406,7 +406,7 @@ async function getChatResponseWithPrompt(userMessage, systemPrompt, history = []
 //   - Simpler error handling than WebSockets for this use case
 // ---------------------------------------------------------------------------
 async function* streamChatResponse(userMessage, systemPrompt, history = [], mode = 'normal') {
-    const { default: OpenAI } = await import('openai');
+    const OpenAI = (await import('openai')).default;
     const groq = new OpenAI({
         apiKey: process.env.GROQ_API_KEY,
         baseURL: 'https://api.groq.com/openai/v1'
@@ -452,7 +452,7 @@ export async function queryRAG(userQuery, options = {}) {
     const { sessionId = null, mode = 'normal' } = options;
 
     try {
-        console.log(`🔍 RAG Query [${mode}]: "${userQuery.substring(0, 60)}..."`);
+        console.log(`🔍 RAG Query [${mode}]: "${userQuery.substring(0, 60)}${userQuery.length > 60 ? '...' : ''}"`);
 
         // Step 0: Handle greetings and meta-questions without RAG
         const intent = detectConversationalIntent(userQuery);
@@ -570,7 +570,7 @@ export async function streamRAG(userQuery, options = {}, { onToken, onSources, o
     const { sessionId = null, mode = 'normal' } = options;
 
     try {
-        console.log(`🔍 Stream RAG [${mode}]: "${userQuery.substring(0, 60)}..."`);
+        console.log(`🔍 Stream RAG [${mode}]: "${userQuery.substring(0, 60)}${userQuery.length > 60 ? '...' : ''}"`);
 
         // Step 0: Handle greetings and meta-questions without RAG
         const intent = detectConversationalIntent(userQuery);

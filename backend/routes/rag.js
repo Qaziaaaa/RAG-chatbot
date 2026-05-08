@@ -352,7 +352,15 @@ router.get('/config', (req, res) => {
  *   Large PDFs can take 30-60s to embed. Returning a jobId lets the
  *   frontend show a progress indicator without holding the connection open.
  */
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            // Multer errors (file too large, wrong type) need to be caught here
+            return res.status(400).json({ error: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded. Send a multipart/form-data request with field "file".' });

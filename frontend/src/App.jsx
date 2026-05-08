@@ -468,9 +468,13 @@ function DocumentLibrary({ selectedIds, onToggle, refreshTrigger, userId, access
     <div className="doc-library">
       <div className="doc-library-header">
         <span className="doc-count">{docs.length} doc{docs.length !== 1 ? 's' : ''}</span>
-        <button className="select-all-btn" onClick={() =>
-          docs.forEach(d => { if (allSelected ? selectedIds.includes(d.id) : !selectedIds.includes(d.id)) onToggle(d.id); })
-        }>{allSelected ? 'Deselect all' : 'Select all'}</button>
+        <button className="select-all-btn" onClick={() => {
+          if (allSelected) {
+            docs.forEach(d => { if (selectedIds.includes(d.id)) onToggle(d.id); });
+          } else {
+            docs.forEach(d => { if (!selectedIds.includes(d.id)) onToggle(d.id); });
+          }
+        }}>{allSelected ? 'Deselect all' : 'Select all'}</button>
       </div>
       <p className="doc-scope-hint">
         {selectedIds.length === 0
@@ -601,10 +605,10 @@ export default function App() {
       localStorage.setItem(key, id);
     }
     return id;
-  });
+  })();
 
   // Resolved identity: auth user ID if logged in, else anonymous UUID
-  const userId      = session?.user?.id || anonId();
+  const userId      = session?.user?.id || anonId;
   const accessToken = session?.access_token || null;
   const userEmail   = session?.user?.email || null;
 
@@ -682,7 +686,6 @@ export default function App() {
     setMessages(prev => [...prev, { role: 'user', text, sources: [] }]);
 
     // Add empty bot message that will be filled by streaming
-    const botMsgIdx = (msgs) => msgs.length; // index of the new bot message
     setMessages(prev => [...prev, { role: 'bot', text: '', sources: [], streaming: true }]);
 
     const body = {
