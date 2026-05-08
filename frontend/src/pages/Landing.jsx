@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/Landing.css';
 
@@ -94,6 +95,7 @@ function StepCard({ number, icon, title, description }) {
 // ── Main Landing Page ─────────────────────────────────────────────────────────
 export default function Landing() {
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className="landing">
@@ -123,7 +125,29 @@ export default function Landing() {
           <button className="nav-cta" onClick={() => navigate('/app')}>
             Get Started Free
           </button>
+          {/* Hamburger — mobile only */}
+          <button
+            className="nav-hamburger"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Toggle menu"
+            aria-expanded={menuOpen}
+          >
+            {menuOpen
+              ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="22" height="22"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="22" height="22"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            }
+          </button>
         </div>
+        {/* Mobile dropdown menu */}
+        {menuOpen && (
+          <div className="nav-mobile-menu" onClick={() => setMenuOpen(false)}>
+            <a href="#features" className="nav-mobile-link">Features</a>
+            <a href="#how-it-works" className="nav-mobile-link">How it works</a>
+            <a href="#pricing" className="nav-mobile-link">Pricing</a>
+            <a href="https://github.com/Qaziaaaa/RAG-chatbot" target="_blank" rel="noopener noreferrer" className="nav-mobile-link">GitHub</a>
+            <button className="nav-mobile-cta" onClick={() => navigate('/app')}>Get Started Free</button>
+          </div>
+        )}
       </nav>
 
       {/* ── Hero ── */}

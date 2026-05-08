@@ -1660,3 +1660,93 @@ body {
     max-width: 90%;
   }
 }
+
+/* ── Sidebar back button — mobile only ──────────────────────────────────── */
+.sidebar-back-btn {
+  display: none; /* hidden on desktop */
+  align-items: center;
+  gap: 5px;
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid var(--border-cyan);
+  color: var(--text-cyan);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+.sidebar-back-btn:hover { background: rgba(34, 211, 238, 0.15); }
+
+@media (max-width: 640px) {
+  /* Show back button on mobile */
+  .sidebar-back-btn {
+    display: flex;
+  }
+
+  /* Hide the X close button on mobile — back button replaces it */
+  .sidebar-close {
+    display: none;
+  }
+
+  /* Header name — truncate cleanly */
+  .header-name {
+    font-size: 0.75rem;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Header info block — don't let it grow too wide */
+  .header-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* Avatar — smaller on mobile */
+  .header-avatar svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Mode buttons — icon only on very small screens */
+  .mode-btn {
+    padding: 5px 8px;
+    font-size: 0.70rem;
+    border-radius: 12px;
+  }
+
+  /* Input toolbar — stack if needed */
+  .input-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Message bubbles — full width */
+  .message-group.user,
+  .message-group.bot {
+    max-width: 98%;
+  }
+
+  /* Bubble text — slightly smaller */
+  .bubble {
+    font-size: 0.85rem;
+    padding: 10px 12px;
+  }
+
+  /* Source panel — no left indent on mobile */
+  .source-panel-wrapper {
+    padding-left: 0;
+  }
+
+  /* Sidebar header — wrap if needed */
+  .sidebar-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px 12px 8px;
+  }
+}
