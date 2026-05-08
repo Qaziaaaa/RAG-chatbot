@@ -798,6 +798,15 @@ export default function App() {
           </div>
           <UploadZone onUploadComplete={() => setRefreshTrigger(t => t + 1)} userId={userId} accessToken={accessToken} />
           <DocumentLibrary selectedIds={selectedDocIds} onToggle={toggleDoc} refreshTrigger={refreshTrigger} userId={userId} accessToken={accessToken} />
+          {/* Sticky back button at bottom — mobile only, always visible */}
+          <div className="sidebar-mobile-footer">
+            <button className="sidebar-mobile-back" onClick={() => setSidebarOpen(false)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+              Back to Chat
+            </button>
+          </div>
         </aside>
 
         {/* ── Chat panel ── */}

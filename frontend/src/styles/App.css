@@ -1530,24 +1530,41 @@ body {
    MOBILE RESPONSIVE
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Back to chat button — hidden on desktop, shown on mobile */
-.sidebar-back-btn {
-  display: none;
-  align-items: center;
-  gap: 6px;
-  background: var(--cyan);
-  border: none;
-  color: #000;
-  font-family: var(--font-body);
-  font-size: 0.80rem;
-  font-weight: 700;
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.12s;
+/* ── Sidebar mobile footer — sticky back button ──────────────────────────── */
+.sidebar-mobile-footer {
+  display: none; /* hidden on desktop */
 }
-.sidebar-back-btn:hover { background: #a5f3fc; }
+
+@media (max-width: 640px) {
+  .sidebar-mobile-footer {
+    display: block;
+    position: sticky;
+    bottom: 0;
+    padding: 12px 14px;
+    background: rgba(2, 6, 23, 0.98);
+    border-top: 1px solid var(--border-base);
+    flex-shrink: 0;
+  }
+
+  .sidebar-mobile-back {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--cyan);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 13px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .sidebar-mobile-back:hover { background: #a5f3fc; }
+}
 
 @media (max-width: 640px) {
 
