@@ -1532,7 +1532,7 @@ body {
 
 /* ── Mobile sidebar overlay — true fullscreen, outside layout ────────────── */
 .mobile-sidebar-overlay {
-  display: none;
+  display: none; /* hidden on desktop always */
 }
 
 @media (max-width: 640px) {
@@ -1609,9 +1609,9 @@ body {
     z-index: 199;
   }
 
-  /* Show back button, hide X */
-  .sidebar-back-btn { display: flex; }
-  .sidebar-close { display: none; }
+  /* Hide back button and X on mobile — back is handled by mobile overlay */
+  .sidebar-back-btn { display: none; }
+  .sidebar-close { display: flex; }
 
   /* Always show the docs toggle button in header */
   .sidebar-toggle { display: flex !important; }
