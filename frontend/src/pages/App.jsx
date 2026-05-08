@@ -770,6 +770,35 @@ export default function App() {
       {/* Auth modal — shown on demand */}
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
+      {/* ── Mobile sidebar overlay — rendered OUTSIDE layout so overflow:hidden doesn't clip it ── */}
+      {sidebarOpen && (
+        <div className="mobile-sidebar-overlay">
+          <div className="mobile-sidebar-panel">
+            <div className="sidebar-header">
+              <span className="sidebar-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" style={{display:'inline',verticalAlign:'middle',marginRight:6}}>
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                My Documents
+              </span>
+              <button className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close">✕</button>
+            </div>
+            <div style={{flex:1, overflowY:'auto', display:'flex', flexDirection:'column'}}>
+              <UploadZone onUploadComplete={() => setRefreshTrigger(t => t + 1)} userId={userId} accessToken={accessToken} />
+              <DocumentLibrary selectedIds={selectedDocIds} onToggle={toggleDoc} refreshTrigger={refreshTrigger} userId={userId} accessToken={accessToken} />
+            </div>
+            <div className="mobile-sidebar-footer">
+              <button className="mobile-back-btn" onClick={() => setSidebarOpen(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+                Back to Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`layout${sidebarOpen ? ' sidebar-open' : ''}`}>
 
         {/* ── Sidebar ── */}

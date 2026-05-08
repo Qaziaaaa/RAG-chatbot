@@ -106,10 +106,10 @@ body {
 .layout {
   display: flex;
   width: 100%;
-  flex: 1;           /* takes all space between nothing and footer */
+  flex: 1;
   overflow: hidden;
   position: relative;
-  min-height: 0;     /* critical — allows flex children to shrink */
+  min-height: 0;
 }
 
 /* ── Fixed header ────────────────────────────────────────────────────────── */
@@ -1530,23 +1530,37 @@ body {
    MOBILE RESPONSIVE
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Sidebar mobile footer — sticky back button ──────────────────────────── */
-.sidebar-mobile-footer {
-  display: none; /* hidden on desktop */
+/* ── Mobile sidebar overlay — true fullscreen, outside layout ────────────── */
+.mobile-sidebar-overlay {
+  display: none;
 }
 
 @media (max-width: 640px) {
-  .sidebar-mobile-footer {
-    display: block;
-    position: sticky;
-    bottom: 0;
-    padding: 12px 14px;
-    background: rgba(2, 6, 23, 0.98);
+  .mobile-sidebar-overlay {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0,0,0,0.5);
+  }
+
+  .mobile-sidebar-panel {
+    width: 100%;
+    height: 100%;
+    background: #0a1020;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .mobile-sidebar-footer {
+    padding: 12px 14px 20px;
+    background: #0a1020;
     border-top: 1px solid var(--border-base);
     flex-shrink: 0;
   }
 
-  .sidebar-mobile-back {
+  .mobile-back-btn {
     width: 100%;
     display: flex;
     align-items: center;
@@ -1557,13 +1571,13 @@ body {
     border: none;
     border-radius: 8px;
     font-family: var(--font-body);
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 700;
-    padding: 13px;
+    padding: 14px;
     cursor: pointer;
     transition: background 0.12s;
   }
-  .sidebar-mobile-back:hover { background: #a5f3fc; }
+  .mobile-back-btn:hover { background: #a5f3fc; }
 }
 
 @media (max-width: 640px) {
