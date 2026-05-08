@@ -771,7 +771,7 @@ export default function App() {
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
       {/* ── Mobile sidebar overlay — rendered OUTSIDE layout so overflow:hidden doesn't clip it ── */}
-      {sidebarOpen && window.innerWidth <= 640 && (
+      {sidebarOpen && (
         <div className="mobile-sidebar-overlay">
           <div className="mobile-sidebar-panel">
             <div className="sidebar-header">
