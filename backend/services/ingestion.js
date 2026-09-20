@@ -31,6 +31,34 @@ import { supabase } from '../config/database.js';
 import { processDocument } from './chunker.js';
 import { prepareChunksBatch } from './embeddings.js';
 
+// ── Retry helper ─────────────────────────────────────────────────────────────
+
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
+function isNetworkError(err) {
+    const msg = (err?.message || '').toLowerCase();
+    return msg.includes('fetch failed') || msg.includes('network') || msg.includes('econnrefused') || msg.includes('enotfound') || msg.includes('timeout');
+}
+
+async function supabaseInsertWithRetry(table, data, retries = MAX_RETRIES) {
+    let lastErr;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        const { error } = await supabase.from(table).insert(data);
+        if (!error) return { error: null };
+        lastErr = error;
+
+        if (isNetworkError(error) && attempt < retries) {
+            const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+            console.warn(`⚠️ Supabase ${table} insert failed (attempt ${attempt}/${retries}): ${error.message}. Retrying in ${delay}ms...`);
+            await new Promise(r => setTimeout(r, delay));
+            continue;
+        }
+        break;
+    }
+    return { error: lastErr };
+}
+
 // In-memory job store — good enough for a single-server deployment.
 // For multi-instance, move this to the upload_jobs Supabase table.
 const jobs = new Map();
@@ -191,7 +219,7 @@ async function _runIngestion(jobId, buffer, filename, mimeType, userId = null) {
     const title = filename.replace(/\.[^.]+$/, '');
     const fileType = mimeType === 'application/pdf' ? 'pdf' : 'text';
 
-    const { error: docErr } = await supabase.from('documents').insert({
+    const { error: docErr } = await supabaseInsertWithRetry('documents', {
         id: documentId,
         title,
         content: text,
@@ -205,7 +233,12 @@ async function _runIngestion(jobId, buffer, filename, mimeType, userId = null) {
             uploadedAt: new Date().toISOString()
         }
     });
-    if (docErr) throw new Error(`DB insert failed: ${docErr.message}`);
+    if (docErr) {
+        if (isNetworkError(docErr)) {
+            throw new Error(`Cannot connect to database: ${docErr.message}. Your Supabase project may be paused — check https://supabase.com/dashboard`);
+        }
+        throw new Error(`DB insert failed: ${docErr.message}`);
+    }
     console.log(`  ✓ Document record: ${documentId}`);
 
     console.log('  2. Chunking...');
@@ -220,8 +253,13 @@ async function _runIngestion(jobId, buffer, filename, mimeType, userId = null) {
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
         const batch = chunks.slice(i, i + BATCH_SIZE);
         const withEmbeddings = await prepareChunksBatch(batch, documentId);
-        const { error: chunkErr } = await supabase.from('document_chunks').insert(withEmbeddings);
-        if (chunkErr) throw new Error(`Chunk insert failed: ${chunkErr.message}`);
+        const { error: chunkErr } = await supabaseInsertWithRetry('document_chunks', withEmbeddings);
+        if (chunkErr) {
+            if (isNetworkError(chunkErr)) {
+                throw new Error(`Cannot connect to database while storing chunks: ${chunkErr.message}`);
+            }
+            throw new Error(`Chunk insert failed: ${chunkErr.message}`);
+        }
         stored += withEmbeddings.length;
         console.log(`  ✓ Stored batch ${Math.floor(i / BATCH_SIZE) + 1} (${stored}/${chunks.length} chunks)`);
     }

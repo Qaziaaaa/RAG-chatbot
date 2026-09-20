@@ -43,11 +43,25 @@ testConnection();
 // Health check
 app.get('/api/health', async (req, res) => {
   const dbConnected = await testConnection();
+  
+  // Check Supabase project status
+  let dbStatus = 'unknown';
+  let dbMessage = '';
+  if (dbConnected) {
+    dbStatus = 'connected';
+    dbMessage = 'Supabase is reachable';
+  } else {
+    dbStatus = 'disconnected';
+    dbMessage = 'Supabase unreachable — project may be paused. Visit https://supabase.com/dashboard to check.';
+  }
+
   res.json({ 
-    status: 'ok', 
+    status: dbConnected ? 'ok' : 'degraded',
     llm: process.env.GROQ_API_KEY ? 'configured' : 'not configured',
-    database: dbConnected ? 'connected' : 'disconnected',
-    mode: 'RAG (Retrieval Augmented Generation)'
+    database: dbStatus,
+    databaseMessage: dbMessage,
+    mode: 'RAG (Retrieval Augmented Generation)',
+    timestamp: new Date().toISOString()
   });
 });
 
