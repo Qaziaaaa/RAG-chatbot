@@ -20,9 +20,13 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Register pgvector type
+// Register pgvector type on each new connection (after vector extension exists)
 pool.on('connect', async (client) => {
-    await pgvector.registerTypes(client);
+    try {
+        await pgvector.registerTypes(client);
+    } catch {
+        // Vector type not yet created — will be set up in ensureSchema()
+    }
 });
 
 /**
@@ -45,7 +49,11 @@ export async function testConnection() {
 export async function ensureSchema() {
     const client = await pool.connect();
     try {
+        // Enable vector extension first
         await client.query('CREATE EXTENSION IF NOT EXISTS vector');
+
+        // Now register pgvector types on this client
+        await pgvector.registerTypes(client);
 
         await client.query(`
             CREATE TABLE IF NOT EXISTS documents (
