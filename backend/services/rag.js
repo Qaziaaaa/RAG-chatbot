@@ -11,7 +11,7 @@
 
 import { generateEmbeddings } from './embeddings.js';
 import { getChatResponse } from './llm.js';
-import { supabase } from '../config/database.js';
+import pool from '../config/database.js';
 
 // ---------------------------------------------------------------------------
 // Embedding cache
@@ -156,36 +156,27 @@ async function searchRelevantChunks(queryEmbedding, options = {}) {
         topK = CONFIG.MAX_TOP_K,
         threshold = CONFIG.MIN_SIMILARITY,
         documentIds = null,
-        userId = null        // scope search to this user's documents
+        userId = null
     } = options;
     try {
         const embeddingString = `[${queryEmbedding.join(',')}]`;
 
-        const rpcParams = {
-            query_embedding: embeddingString,
-            match_threshold: threshold,
-            match_count: topK,
-            filter_doc_ids: documentIds && documentIds.length > 0 ? documentIds : null,
-            filter_user_id: userId || null
-        };
-
-        let { data, error } = await supabase.rpc('search_similar_chunks', rpcParams);
-
-        // If the RPC doesn't have filter_user_id yet (pre-migration), retry without it
-        if (error && error.message?.includes('filter_user_id')) {
-            console.warn('⚠️  search_similar_chunks missing filter_user_id — run schema_v3_migration.sql');
-            const fallbackParams = {
-                query_embedding: embeddingString,
-                match_threshold: threshold,
-                match_count: topK,
-                filter_doc_ids: documentIds && documentIds.length > 0 ? documentIds : null
-            };
-            const result = await supabase.rpc('search_similar_chunks', fallbackParams);
-            data = result.data;
-            error = result.error;
+        let result;
+        try {
+            result = await pool.query(
+                `SELECT * FROM search_similar_chunks($1, $2, $3, $4, $5)`,
+                [embeddingString, threshold, topK, documentIds || null, userId || null]
+            );
+        } catch (rpcErr) {
+            // Fallback without user filter if function is older version
+            console.warn('⚠️  search_similar_chunks with user filter failed, retrying without:', rpcErr.message);
+            result = await pool.query(
+                `SELECT * FROM search_similar_chunks($1, $2, $3, $4)`,
+                [embeddingString, threshold, topK, documentIds || null]
+            );
         }
 
-        if (error) throw error;
+        const data = result.rows;
         if (!data || data.length === 0) return [];
 
         const deduplicated = deduplicateChunks(data, 0.85);
@@ -195,17 +186,15 @@ async function searchRelevantChunks(queryEmbedding, options = {}) {
         }));
         const ranked = scored.sort((a, b) => b.finalScore - a.finalScore).slice(0, CONFIG.TARGET_TOP_K);
 
-        // Enrich with document titles via a single batch lookup
+        // Enrich with document titles
         const docIds = [...new Set(ranked.map(c => c.document_id).filter(Boolean))];
         if (docIds.length > 0) {
-            const { data: docs } = await supabase
-                .from('documents')
-                .select('id, title')
-                .in('id', docIds);
-            if (docs) {
-                const titleMap = Object.fromEntries(docs.map(d => [d.id, d.title]));
-                ranked.forEach(c => { c.document_title = titleMap[c.document_id] || null; });
-            }
+            const { rows: docs } = await pool.query(
+                `SELECT id, title FROM documents WHERE id = ANY($1)`,
+                [docIds]
+            );
+            const titleMap = Object.fromEntries(docs.map(d => [d.id, d.title]));
+            ranked.forEach(c => { c.document_title = titleMap[c.document_id] || null; });
         }
 
         return ranked;

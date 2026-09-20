@@ -1,6 +1,5 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import Markdown from 'react-markdown';
-import { supabase } from '../lib/supabase.js';
 import '../styles/App.css';
 
 // ── Session ID — resets on tab close (for conversation memory only) ─────────
@@ -24,100 +23,6 @@ function formatBytes(b) {
 function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-// ── Auth Modal ───────────────────────────────────────────────────────────────
-function AuthModal({ onClose }) {
-  const [tab, setTab]         = useState('login');   // 'login' | 'signup'
-  const [email, setEmail]     = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
-  const [info, setInfo]       = useState('');
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setError(''); setInfo('');
-    if (!email || !password) { setError('Email and password are required.'); return; }
-    setLoading(true);
-    try {
-      if (tab === 'signup') {
-        const { error: err } = await supabase.auth.signUp({ email, password });
-        if (err) throw err;
-        setInfo('Check your email for a confirmation link, then log in.');
-      } else {
-        const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-        if (err) throw err;
-        onClose();
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signInWithGoogle = async () => {
-    setError('');
-    const { error: err } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin }
-    });
-    if (err) setError(err.message);
-  };
-
-  return (
-    <div className="auth-overlay" onClick={onClose}>
-      <div className="auth-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="auth-close" onClick={onClose} aria-label="Close">✕</button>
-        <h2 className="auth-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="22" height="22" style={{display:'inline',verticalAlign:'middle',marginRight:8,color:'var(--cyan)'}}>
-            <rect x="3" y="8" width="18" height="12" rx="2"/>
-            <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
-            <circle cx="9" cy="14" r="1.5" fill="currentColor" stroke="none"/>
-            <circle cx="15" cy="14" r="1.5" fill="currentColor" stroke="none"/>
-            <path d="M9 18h6" strokeLinecap="round"/>
-          </svg>
-          DocChat
-        </h2>
-        <p className="auth-subtitle">Sign in to keep your documents across devices</p>
-
-        <div className="auth-tabs">
-          <button className={`auth-tab${tab === 'login' ? ' active' : ''}`} onClick={() => { setTab('login'); setError(''); setInfo(''); }}>Log in</button>
-          <button className={`auth-tab${tab === 'signup' ? ' active' : ''}`} onClick={() => { setTab('signup'); setError(''); setInfo(''); }}>Sign up</button>
-        </div>
-
-        <form onSubmit={submit} className="auth-form">
-          <input className="auth-input" type="email" placeholder="Email" value={email}
-            onChange={e => setEmail(e.target.value)} disabled={loading} autoFocus />
-          <input className="auth-input" type="password" placeholder="Password (min 6 chars)" value={password}
-            onChange={e => setPassword(e.target.value)} disabled={loading} />
-          {error && <p className="auth-error">{error}</p>}
-          {info  && <p className="auth-info">{info}</p>}
-          <button className="auth-submit" type="submit" disabled={loading}>
-            {loading ? <span className="spinner" /> : tab === 'login' ? 'Log in' : 'Create account'}
-          </button>
-        </form>
-
-        {/* Google OAuth — requires setup in Supabase Dashboard → Authentication → Providers → Google
-        <div className="auth-divider"><span>or</span></div>
-        <button className="auth-google" onClick={signInWithGoogle} disabled={loading}>
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-          Continue with Google
-        </button>
-        */}
-
-        <p className="auth-skip">
-          <button className="auth-skip-btn" onClick={onClose}>Continue without account →</button>
-        </p>
-      </div>
-    </div>
-  );
 }
 
 // ── Markdown renderer ────────────────────────────────────────────────────────
@@ -258,7 +163,7 @@ function SourcePanel({ sources }) {
 }
 
 // ── Upload zone ──────────────────────────────────────────────────────────────
-function UploadZone({ onUploadComplete, userId, accessToken }) {
+function UploadZone({ onUploadComplete, userId }) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState(null);
@@ -284,14 +189,8 @@ function UploadZone({ onUploadComplete, userId, accessToken }) {
     try {
       const form = new FormData();
       form.append('file', file);
-      // Send auth token if logged in, else send anonymous userId
-      if (accessToken) {
-        form.append('_authToken', accessToken); // picked up by middleware via Authorization header
-      } else {
-        form.append('userId', userId);
-      }
-      const headers = accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {};
-      const res = await fetch('/api/rag/upload', { method: 'POST', body: form, headers });
+      form.append('userId', userId);
+      const res = await fetch('/api/rag/upload', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
       setStatus({ type: 'progress', message: `Processing "${file.name}"…` });
@@ -409,43 +308,40 @@ function fileIconType(doc) {
   return ext || 'default';
 }
 
-function DocumentLibrary({ selectedIds, onToggle, refreshTrigger, userId, accessToken }) {
+function DocumentLibrary({ selectedIds, onToggle, refreshTrigger, userId }) {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDocs = useCallback(async () => {
     setLoading(true);
     try {
-      const headers = accessToken
-        ? { 'Authorization': `Bearer ${accessToken}` }
-        : { 'X-User-Id': userId };
-      const res = await fetch('/api/rag/documents', { headers });
+      const res = await fetch('/api/rag/documents', {
+        headers: { 'X-User-Id': userId }
+      });
       const data = await res.json();
       setDocs(data.documents || []);
     } catch { setDocs([]); }
     finally { setLoading(false); }
-  }, [userId, accessToken]);
+  }, [userId]);
 
   useEffect(() => { fetchDocs(); }, [fetchDocs, refreshTrigger]);
 
   const handleDelete = async (e, id) => {
     e.stopPropagation();
     if (!confirm('Delete this document and all its chunks?')) return;
-    // Optimistic update — remove from UI immediately so user sees instant feedback
     setDocs(prev => prev.filter(d => d.id !== id));
     try {
-      const headers = accessToken
-        ? { 'Authorization': `Bearer ${accessToken}` }
-        : { 'X-User-Id': userId };
-      const res = await fetch(`/api/rag/documents/${id}`, { method: 'DELETE', headers });
+      const res = await fetch(`/api/rag/documents/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Id': userId }
+      });
       if (!res.ok) {
-        // Revert on failure
         fetchDocs();
         alert('Delete failed — please try again.');
       }
     }
     catch {
-      fetchDocs(); // revert on network error
+      fetchDocs();
       alert('Delete failed');
     }
   };
@@ -527,21 +423,14 @@ function DocumentLibrary({ selectedIds, onToggle, refreshTrigger, userId, access
 // direct localhost in development to bypass Vite proxy buffering for SSE.
 const BACKEND_URL = import.meta.env.DEV ? 'http://localhost:3000' : '';
 
-// Build request headers — adds Authorization if user is logged in
-function buildHeaders(accessToken, extra = {}) {
-  const h = { 'Content-Type': 'application/json', ...extra };
-  if (accessToken) h['Authorization'] = `Bearer ${accessToken}`;
-  return h;
-}
-
-function streamChat(body, accessToken, { onToken, onSources, onDone, onError }) {
+function streamChat(body, { onToken, onSources, onDone, onError }) {
   const controller = new AbortController();
 
   (async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/rag/chat/stream`, {
         method: 'POST',
-        headers: buildHeaders(accessToken),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
         signal: controller.signal
       });
@@ -588,13 +477,8 @@ function streamChat(body, accessToken, { onToken, onSources, onDone, onError }) 
 
 // ── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  // ── Auth state ──────────────────────────────────────────────────────────
-  const [session, setSession]     = useState(null);   // Supabase session
-  const [authReady, setAuthReady] = useState(false);  // true once we know auth state
-  const [showAuth, setShowAuth]   = useState(false);  // show login modal
-
-  // Fallback anonymous ID — used when not logged in
-  const anonId = (() => {
+  // Anonymous user ID — persisted in localStorage
+  const userId = (() => {
     const key = 'rag_user_id';
     let id = localStorage.getItem(key);
     if (!id) {
@@ -607,40 +491,6 @@ export default function App() {
     return id;
   })();
 
-  // Resolved identity: auth user ID if logged in, else anonymous UUID
-  const userId      = session?.user?.id || anonId;
-  const accessToken = session?.access_token || null;
-  const userEmail   = session?.user?.email || null;
-
-  // Listen for auth state changes (login, logout, token refresh)
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setAuthReady(true);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setAuthReady(true);
-      if (session) {
-        // Logged in — close modal and refresh document list for this user
-        setShowAuth(false);
-        setSelectedDocIds([]);
-        setRefreshTrigger(t => t + 1);
-      }
-      if (event === 'SIGNED_OUT') {
-        // Logged out — clear everything so the next user sees a clean slate
-        setSelectedDocIds([]);
-        setRefreshTrigger(t => t + 1);
-        setMessages([{
-          role: 'bot',
-          text: "**Welcome to DocChat!**\n\nUpload your documents or code files using the panel on the left, then ask me anything about them.\n\nI can summarize, explain, answer questions, and find information from your files.",
-          sources: [],
-          streaming: false
-        }]);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
   const [messages, setMessages] = useState([{
     role: 'bot',
     text: "**Welcome to DocChat!**\n\nUpload your documents or code files using the panel on the left, then ask me anything about them.\n\nI can summarize, explain, answer questions, and find information from your files.",
@@ -691,14 +541,12 @@ export default function App() {
     const body = {
       message: text,
       sessionId: SESSION_ID,
-      // If logged in, backend gets userId from JWT — no need to send it in body.
-      // If anonymous, send the localStorage UUID as before.
-      ...(accessToken ? {} : { userId }),
+      userId,
       mode,
       ...(selectedDocIds.length > 0 && { documentIds: selectedDocIds })
     };
 
-    abortRef.current = streamChat(body, accessToken, {
+    abortRef.current = streamChat(body, {
       onToken: (token) => {
         setMessages(prev => {
           const updated = [...prev];
@@ -767,9 +615,6 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Auth modal — shown on demand */}
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-
       {/* ── Mobile sidebar overlay — rendered OUTSIDE layout so overflow:hidden doesn't clip it ── */}
       {sidebarOpen && (
         <div className="mobile-sidebar-overlay">
@@ -784,8 +629,8 @@ export default function App() {
               <button className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close">✕</button>
             </div>
             <div style={{flex:1, overflowY:'auto', display:'flex', flexDirection:'column'}}>
-              <UploadZone onUploadComplete={() => setRefreshTrigger(t => t + 1)} userId={userId} accessToken={accessToken} />
-              <DocumentLibrary selectedIds={selectedDocIds} onToggle={toggleDoc} refreshTrigger={refreshTrigger} userId={userId} accessToken={accessToken} />
+              <UploadZone onUploadComplete={() => setRefreshTrigger(t => t + 1)} userId={userId} />
+              <DocumentLibrary selectedIds={selectedDocIds} onToggle={toggleDoc} refreshTrigger={refreshTrigger} userId={userId} />
             </div>
             <div className="mobile-sidebar-footer">
               <button className="mobile-back-btn" onClick={() => setSidebarOpen(false)}>
@@ -812,8 +657,8 @@ export default function App() {
             </span>
             <button className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close">✕</button>
           </div>
-          <UploadZone onUploadComplete={() => setRefreshTrigger(t => t + 1)} userId={userId} accessToken={accessToken} />
-          <DocumentLibrary selectedIds={selectedDocIds} onToggle={toggleDoc} refreshTrigger={refreshTrigger} userId={userId} accessToken={accessToken} />
+          <UploadZone onUploadComplete={() => setRefreshTrigger(t => t + 1)} userId={userId} />
+          <DocumentLibrary selectedIds={selectedDocIds} onToggle={toggleDoc} refreshTrigger={refreshTrigger} userId={userId} />
         </aside>
 
         {/* ── Chat panel ── */}
@@ -855,23 +700,6 @@ export default function App() {
                     : selectedDocIds.length > 0 ? `Searching ${selectedDocIds.length} selected doc${selectedDocIds.length !== 1 ? 's' : ''}`
                     : 'Searching all documents'}
                 </span>
-              </div>
-              {/* Auth controls */}
-              <div className="header-auth">
-                {session ? (
-                  <>
-                    <span className="header-user" title={userEmail}>
-                      {userEmail?.split('@')[0]}
-                    </span>
-                    <button className="auth-action-btn" onClick={() => supabase.auth.signOut()} title="Sign out">
-                      Sign out
-                    </button>
-                  </>
-                ) : (
-                  <button className="auth-action-btn" onClick={() => setShowAuth(true)}>
-                    Sign in
-                  </button>
-                )}
               </div>
             </header>
 

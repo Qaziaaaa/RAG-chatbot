@@ -9,58 +9,14 @@
  *
  * Processing is async — the upload endpoint returns a jobId immediately,
  * and the caller polls GET /api/rag/upload/:jobId for status.
- *
- * WHY async?
- *   A 50-page PDF can produce 200+ chunks. Each Jina batch call takes ~1s.
- *   Blocking the HTTP request for 30-60s would time out most clients.
- *   Returning a jobId immediately keeps the API responsive.
- *
- * Chunking strategy for PDFs:
- *   PDFs often have inconsistent whitespace, headers, footers, and page
- *   numbers baked into the text stream. We:
- *     1. Collapse runs of whitespace / newlines
- *     2. Strip common noise patterns (page numbers, headers)
- *     3. Apply the same sentence-aware chunker used for plain text
- *   This is simpler and more robust than trying to parse PDF structure.
- *   For structured PDFs (tables, columns) a layout-aware parser like
- *   pdfplumber would be better, but that requires Python — overkill here.
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '../config/database.js';
+import pool from '../config/database.js';
 import { processDocument } from './chunker.js';
 import { prepareChunksBatch } from './embeddings.js';
 
-// ── Retry helper ─────────────────────────────────────────────────────────────
-
-const MAX_RETRIES = 3;
-const BASE_DELAY_MS = 1000;
-
-function isNetworkError(err) {
-    const msg = (err?.message || '').toLowerCase();
-    return msg.includes('fetch failed') || msg.includes('network') || msg.includes('econnrefused') || msg.includes('enotfound') || msg.includes('timeout');
-}
-
-async function supabaseInsertWithRetry(table, data, retries = MAX_RETRIES) {
-    let lastErr;
-    for (let attempt = 1; attempt <= retries; attempt++) {
-        const { error } = await supabase.from(table).insert(data);
-        if (!error) return { error: null };
-        lastErr = error;
-
-        if (isNetworkError(error) && attempt < retries) {
-            const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
-            console.warn(`⚠️ Supabase ${table} insert failed (attempt ${attempt}/${retries}): ${error.message}. Retrying in ${delay}ms...`);
-            await new Promise(r => setTimeout(r, delay));
-            continue;
-        }
-        break;
-    }
-    return { error: lastErr };
-}
-
-// In-memory job store — good enough for a single-server deployment.
-// For multi-instance, move this to the upload_jobs Supabase table.
+// In-memory job store
 const jobs = new Map();
 
 // ── Job management ──────────────────────────────────────────────────────────
@@ -68,13 +24,8 @@ const jobs = new Map();
 export function createJob(filename, fileType, userId = null) {
     const jobId = uuidv4();
     jobs.set(jobId, {
-        jobId,
-        filename,
-        fileType,
-        userId,
-        status: 'pending',
-        documentId: null,
-        chunksCreated: 0,
+        jobId, filename, fileType, userId,
+        status: 'pending', documentId: null, chunksCreated: 0,
         error: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -92,7 +43,7 @@ function updateJob(jobId, patch) {
     Object.assign(job, patch, { updatedAt: new Date().toISOString() });
 }
 
-// Evict completed/failed jobs older than 1 hour to prevent memory leak
+// Evict completed/failed jobs older than 1 hour
 setInterval(() => {
     const cutoff = Date.now() - 60 * 60 * 1000;
     for (const [id, job] of jobs.entries()) {
@@ -104,15 +55,6 @@ setInterval(() => {
 
 // ── Text extraction ─────────────────────────────────────────────────────────
 
-/**
- * Extract plain text from a file buffer.
- * Supports: .txt, .md, .json, .pdf
- *
- * @param {Buffer} buffer   - Raw file bytes
- * @param {string} mimeType - MIME type from multer
- * @param {string} filename - Original filename (used for fallback detection)
- * @returns {Promise<string>} - Extracted text
- */
 export async function extractText(buffer, mimeType, filename) {
     const ext = filename.split('.').pop().toLowerCase();
 
@@ -124,50 +66,26 @@ export async function extractText(buffer, mimeType, filename) {
         return extractJsonText(buffer);
     }
 
-    // Plain text, markdown, CSV, etc.
     return buffer.toString('utf-8');
 }
 
-/**
- * Extract text from a PDF buffer using pdf-parse.
- *
- * PDF chunking strategy:
- *   Raw PDF text streams contain page breaks, headers, footers, and
- *   inconsistent spacing. We clean it up in three passes:
- *     1. Collapse 3+ consecutive newlines → double newline (paragraph break)
- *     2. Remove lines that are purely numeric (page numbers)
- *     3. Collapse runs of spaces/tabs to a single space
- *   The result is clean prose that the sentence-aware chunker handles well.
- */
 async function extractPdfText(buffer) {
-    // Dynamic import avoids the test-file side-effect on module load
     const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
     const data = await pdfParse(buffer);
 
     let text = data.text;
-
-    // Pass 1: normalise paragraph breaks
     text = text.replace(/\n{3,}/g, '\n\n');
-
-    // Pass 2: drop pure page-number lines (e.g. "  42  " or "- 42 -")
     text = text.replace(/^[\s\-–—]*\d+[\s\-–—]*$/gm, '');
-
-    // Pass 3: collapse horizontal whitespace
     text = text.replace(/[ \t]+/g, ' ');
 
     return text.trim();
 }
 
-/**
- * Flatten a JSON object/array into readable key: value lines.
- * Useful for ingesting structured data (FAQs, configs, etc.)
- */
 function extractJsonText(buffer) {
     try {
         const obj = JSON.parse(buffer.toString('utf-8'));
         return flattenJson(obj);
     } catch {
-        // If it's not valid JSON, treat as plain text
         return buffer.toString('utf-8');
     }
 }
@@ -186,15 +104,6 @@ function flattenJson(obj, prefix = '') {
 
 // ── Main ingestion pipeline ─────────────────────────────────────────────────
 
-/**
- * Process an uploaded file asynchronously.
- * Returns immediately — caller polls getJob(jobId) for status.
- *
- * @param {string} jobId    - Job ID created by createJob()
- * @param {Buffer} buffer   - File bytes
- * @param {string} filename - Original filename
- * @param {string} mimeType - MIME type
- */
 export function processUploadAsync(jobId, buffer, filename, mimeType) {
     const job = jobs.get(jobId);
     const userId = job?.userId || null;
@@ -219,26 +128,13 @@ async function _runIngestion(jobId, buffer, filename, mimeType, userId = null) {
     const title = filename.replace(/\.[^.]+$/, '');
     const fileType = mimeType === 'application/pdf' ? 'pdf' : 'text';
 
-    const { error: docErr } = await supabaseInsertWithRetry('documents', {
-        id: documentId,
-        title,
-        content: text,
-        source: filename,
-        user_id: userId,   // ← scoped to this user
-        metadata: {
-            originalFilename: filename,
-            mimeType,
-            fileType,
-            fileSize: buffer.length,
-            uploadedAt: new Date().toISOString()
-        }
-    });
-    if (docErr) {
-        if (isNetworkError(docErr)) {
-            throw new Error(`Cannot connect to database: ${docErr.message}. Your Supabase project may be paused — check https://supabase.com/dashboard`);
-        }
-        throw new Error(`DB insert failed: ${docErr.message}`);
-    }
+    const { error: docErr } = await pool.query(
+        `INSERT INTO documents (id, title, content, source, user_id, file_type, file_size, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [documentId, title, text, filename, userId, fileType, buffer.length,
+         JSON.stringify({ originalFilename: filename, mimeType, fileType, fileSize: buffer.length, uploadedAt: new Date().toISOString() })]
+    );
+    if (docErr) throw new Error(`DB insert failed: ${docErr.message}`);
     console.log(`  ✓ Document record: ${documentId}`);
 
     console.log('  2. Chunking...');
@@ -253,13 +149,17 @@ async function _runIngestion(jobId, buffer, filename, mimeType, userId = null) {
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
         const batch = chunks.slice(i, i + BATCH_SIZE);
         const withEmbeddings = await prepareChunksBatch(batch, documentId);
-        const { error: chunkErr } = await supabaseInsertWithRetry('document_chunks', withEmbeddings);
-        if (chunkErr) {
-            if (isNetworkError(chunkErr)) {
-                throw new Error(`Cannot connect to database while storing chunks: ${chunkErr.message}`);
-            }
-            throw new Error(`Chunk insert failed: ${chunkErr.message}`);
+
+        for (const chunk of withEmbeddings) {
+            const { error: chunkErr } = await pool.query(
+                `INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, metadata)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [chunk.id, chunk.document_id, chunk.chunk_index, chunk.content,
+                 JSON.stringify(chunk.embedding), JSON.stringify(chunk.metadata)]
+            );
+            if (chunkErr) throw new Error(`Chunk insert failed: ${chunkErr.message}`);
         }
+
         stored += withEmbeddings.length;
         console.log(`  ✓ Stored batch ${Math.floor(i / BATCH_SIZE) + 1} (${stored}/${chunks.length} chunks)`);
     }

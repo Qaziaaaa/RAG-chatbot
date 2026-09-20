@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { getChatResponse } from './services/llm.js';
-import { supabase, testConnection } from './config/database.js';
+import pool, { testConnection, ensureSchema } from './config/database.js';
 import ragRoutes from './routes/rag.js';
 
 const app = express();
@@ -30,36 +30,25 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Validate required env vars on startup
-const REQUIRED_ENV = ['GROQ_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'JINA_API_KEY'];
+const REQUIRED_ENV = ['GROQ_API_KEY', 'DATABASE_URL', 'JINA_API_KEY'];
 const missing = REQUIRED_ENV.filter(k => !process.env[k]);
 if (missing.length > 0) {
   console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
   process.exit(1);
 }
 
-// Test database connection on startup
-testConnection();
+// Test database connection and ensure schema
+await testConnection();
+await ensureSchema();
 
 // Health check
 app.get('/api/health', async (req, res) => {
   const dbConnected = await testConnection();
-  
-  // Check Supabase project status
-  let dbStatus = 'unknown';
-  let dbMessage = '';
-  if (dbConnected) {
-    dbStatus = 'connected';
-    dbMessage = 'Supabase is reachable';
-  } else {
-    dbStatus = 'disconnected';
-    dbMessage = 'Supabase unreachable — project may be paused. Visit https://supabase.com/dashboard to check.';
-  }
-
-  res.json({ 
+  res.json({
     status: dbConnected ? 'ok' : 'degraded',
     llm: process.env.GROQ_API_KEY ? 'configured' : 'not configured',
-    database: dbStatus,
-    databaseMessage: dbMessage,
+    database: dbConnected ? 'connected' : 'disconnected',
+    databaseMessage: dbConnected ? 'Neon is reachable' : 'Neon unreachable — check DATABASE_URL',
     mode: 'RAG (Retrieval Augmented Generation)',
     timestamp: new Date().toISOString()
   });
@@ -83,7 +72,6 @@ app.post('/api/chat', async (req, res) => {
   } catch (error) {
     console.error('Chat error:', error.message);
 
-    // Return user-friendly error
     const statusCode = error.status === 401 ? 401 : 503;
     const errorMessage = error.status === 401
       ? 'Invalid API key. Check your .env file.'
@@ -96,29 +84,13 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// RAG routes (new)
+// RAG routes
 app.use('/api/rag', ragRoutes);
-
-// ── Supabase keep-alive ──────────────────────────────────────────────────────
-// Supabase free tier pauses projects after 7 days of inactivity.
-// This pings the DB every 3 days to keep it active.
-// Only runs when the server is deployed (not in local dev).
-if (process.env.NODE_ENV === 'production') {
-  const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-  setInterval(async () => {
-    try {
-      await supabase.from('documents').select('count', { count: 'exact', head: true });
-      console.log('✅ Supabase keep-alive ping sent');
-    } catch (err) {
-      console.warn('⚠️ Keep-alive ping failed:', err.message);
-    }
-  }, THREE_DAYS_MS);
-}
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`🤖 LLM: Groq (${process.env.LLM_MODEL || 'llama-3.1-8b-instant'})`);
-  console.log(`💾 Database: Supabase (pgvector)`);
+  console.log(`💾 Database: Neon (PostgreSQL + pgvector)`);
   console.log(`📚 Mode: RAG (Retrieval Augmented Generation)`);
   console.log(`\n📖 API Endpoints:`);
   console.log(`   POST /api/rag/chat      - RAG chat with retrieval`);

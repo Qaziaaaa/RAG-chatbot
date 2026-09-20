@@ -1,6 +1,6 @@
 /**
  * RAG API Routes
- * 
+ *
  * Endpoints for:
  * - Chat with RAG (retrieval + generation)
  * - Document management (CRUD)
@@ -21,41 +21,12 @@ import {
     isValidUserId
 } from '../services/documents.js';
 import { createJob, getJob, processUploadAsync } from '../services/ingestion.js';
-import { supabase } from '../config/database.js';
 
 const router = express.Router();
 
-// ---------------------------------------------------------------------------
-// userId middleware
-//
-// Priority order (highest → lowest):
-//   1. Supabase JWT (Authorization: Bearer <token>) — full auth, most secure
-//   2. X-User-Id header / body.userId — legacy anonymous UUID (still supported)
-//
-// This means:
-//   - Logged-in users: JWT is verified server-side, user.id used as userId
-//   - Anonymous users: their localStorage UUID is used as before
-//   - Both work simultaneously — no breaking change
-// ---------------------------------------------------------------------------
-router.use(async (req, _res, next) => {
-    // Try JWT first
-    const authHeader = req.headers['authorization'];
-    if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.slice(7);
-        try {
-            // Verify the JWT using the Supabase client (service role can verify any token)
-            const { data: { user }, error } = await supabase.auth.getUser(token);
-            if (!error && user?.id) {
-                req.userId = user.id;   // Supabase Auth UUID
-                req.authMethod = 'jwt';
-                return next();
-            }
-        } catch {
-            // Invalid token — fall through to legacy method
-        }
-    }
-
-    // Fall back to legacy anonymous UUID
+// ── userId middleware ──────────────────────────────────────────────────────
+// Uses anonymous UUID from X-User-Id header or body.userId
+router.use((req, _res, next) => {
     const fromBody   = req.body?.userId;
     const fromHeader = req.headers['x-user-id'];
     const raw = fromBody || fromHeader || null;

@@ -4,29 +4,17 @@
  * All operations are scoped by userId — a client-generated UUID stored in
  * localStorage. This gives each browser session its own isolated document
  * space without requiring login/signup.
- *
- * userId is TEXT (not a FK) so it works without Supabase Auth.
- * When upgrading to full auth, replace userId with the JWT sub claim.
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '../config/database.js';
+import pool from '../config/database.js';
 import { processDocument } from './chunker.js';
 import { prepareChunksBatch } from './embeddings.js';
 
-// ---------------------------------------------------------------------------
-// userId validation
-// A valid userId is a non-empty string of reasonable length.
-// We don't enforce UUID format — any stable client identifier works.
-// ---------------------------------------------------------------------------
 export function isValidUserId(userId) {
     return typeof userId === 'string' && userId.trim().length >= 8 && userId.length <= 128;
 }
 
-/**
- * Store a new document with its chunks, scoped to a user.
- * @param {Object} document - { title, content, source?, metadata?, userId }
- */
 export async function storeDocument(document) {
     const { title, content, source = null, metadata = {}, userId = null } = document;
 
@@ -34,16 +22,11 @@ export async function storeDocument(document) {
 
     try {
         const documentId = uuidv4();
-        const { error: docError } = await supabase
-            .from('documents')
-            .insert({
-                id: documentId,
-                title,
-                content,
-                source,
-                metadata,
-                user_id: userId   // ← scoped to this user
-            });
+        const { error: docError } = await pool.query(
+            `INSERT INTO documents (id, title, content, source, metadata, user_id)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [documentId, title, content, source, JSON.stringify(metadata), userId]
+        );
 
         if (docError) throw docError;
         console.log(`  ✓ Document record created: ${documentId}`);
@@ -61,16 +44,20 @@ export async function storeDocument(document) {
         console.log(`  ✓ Generated ${chunksWithEmbeddings.length} embeddings`);
 
         console.log('  3. Storing chunks in database...');
-        const { error: chunkError } = await supabase
-            .from('document_chunks')
-            .insert(chunksWithEmbeddings);
+        for (const chunk of chunksWithEmbeddings) {
+            const { error: chunkError } = await pool.query(
+                `INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, metadata)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [chunk.id, chunk.document_id, chunk.chunk_index, chunk.content,
+                 JSON.stringify(chunk.embedding), JSON.stringify(chunk.metadata)]
+            );
+            if (chunkError) throw chunkError;
+        }
 
-        if (chunkError) throw chunkError;
         console.log(`  ✓ Stored ${chunksWithEmbeddings.length} chunks`);
 
         return {
-            documentId,
-            title,
+            documentId, title,
             chunksInserted: chunksWithEmbeddings.length,
             totalChars: content.length,
             message: 'Document stored successfully'
@@ -82,9 +69,6 @@ export async function storeDocument(document) {
     }
 }
 
-/**
- * Store multiple documents in batch, all scoped to the same user.
- */
 export async function storeDocumentsBatch(documents, userId = null) {
     console.log(`📚 Storing ${documents.length} documents (user: ${userId || 'anonymous'})...`);
 
@@ -105,198 +89,161 @@ export async function storeDocumentsBatch(documents, userId = null) {
     return results;
 }
 
-/**
- * List documents for a specific user (or all if userId is null).
- * Gracefully handles missing user_id column (pre-migration).
- * @param {string|null} userId
- */
 export async function listDocuments(userId = null) {
-    let query = supabase
-        .from('documents')
-        .select('id, title, source, metadata, created_at')
-        .order('created_at', { ascending: false });
+    let result;
 
     if (userId) {
-        // Show documents owned by this user OR legacy docs with no owner (user_id IS NULL)
-        // WHY: Documents uploaded before the migration have user_id = NULL.
-        // Showing them prevents data loss confusion after running the migration.
-        query = query.or(`user_id.eq.${userId},user_id.is.null`);
+        result = await pool.query(
+            `SELECT id, title, source, metadata, created_at
+             FROM documents
+             WHERE user_id = $1 OR user_id IS NULL
+             ORDER BY created_at DESC`,
+            [userId]
+        );
+    } else {
+        result = await pool.query(
+            `SELECT id, title, source, metadata, created_at
+             FROM documents
+             ORDER BY created_at DESC`
+        );
     }
 
-    const { data, error } = await query;
+    const docs = result.rows;
+    if (docs.length === 0) return [];
 
-    if (error) {
-        console.warn('⚠️  listDocuments failed (user_id column may be missing) — run schema_v3_migration.sql');
-        const { data: allData, error: allErr } = await supabase
-            .from('documents')
-            .select('id, title, source, metadata, created_at')
-            .order('created_at', { ascending: false });
-        if (allErr) throw allErr;
-        if (!allData || allData.length === 0) return [];
-        return _attachChunkCounts(allData);
-    }
-
-    if (!data || data.length === 0) return [];
-    return _attachChunkCounts(data);
+    return _attachChunkCounts(docs);
 }
 
 async function _attachChunkCounts(docs) {
     const ids = docs.map(d => d.id);
-    const { data: chunkCounts } = await supabase
-        .from('document_chunks')
-        .select('document_id')
-        .in('document_id', ids);
+    const { rows: chunkCounts } = await pool.query(
+        `SELECT document_id, COUNT(*) as count
+         FROM document_chunks
+         WHERE document_id = ANY($1)
+         GROUP BY document_id`,
+        [ids]
+    );
 
     const countMap = {};
-    (chunkCounts || []).forEach(r => {
-        countMap[r.document_id] = (countMap[r.document_id] || 0) + 1;
-    });
+    chunkCounts.forEach(r => { countMap[r.document_id] = parseInt(r.count); });
 
     return docs.map(doc => ({
         ...doc,
-        file_type: doc.file_type || (doc.metadata?.mimeType?.includes('pdf') ? 'pdf' : 'text'),
-        file_size: doc.file_size || null,
+        file_type: doc.metadata?.mimeType?.includes('pdf') ? 'pdf' : 'text',
+        file_size: null,
         chunkCount: countMap[doc.id] || 0
     }));
 }
 
-/**
- * Get a document with its chunks — verifies ownership if userId provided.
- * @param {string} documentId
- * @param {string|null} userId
- */
 export async function getDocumentWithChunks(documentId, userId = null) {
-    let query = supabase.from('documents').select('*').eq('id', documentId);
-    // Only add user_id filter if column likely exists (post-migration)
-    // We attempt it and fall back if the column is missing
-    if (userId) query = query.eq('user_id', userId);
+    let docResult;
 
-    const { data: document, error: docError } = await query.single();
-
-    if (docError) {
-        // If user_id column missing, retry without it
-        if (docError.message?.includes('user_id') || docError.code === '42703') {
-            const { data: doc2, error: e2 } = await supabase
-                .from('documents').select('*').eq('id', documentId).single();
-            if (e2) throw e2;
-            const { data: chunks } = await supabase
-                .from('document_chunks').select('id, chunk_index, content, metadata')
-                .eq('document_id', documentId).order('chunk_index');
-            return { ...doc2, chunks: chunks || [] };
-        }
-        throw docError;
+    if (userId) {
+        docResult = await pool.query(
+            `SELECT * FROM documents WHERE id = $1 AND user_id = $2`,
+            [documentId, userId]
+        );
+    } else {
+        docResult = await pool.query(
+            `SELECT * FROM documents WHERE id = $1`,
+            [documentId]
+        );
     }
 
-    const { data: chunks, error: chunkError } = await supabase
-        .from('document_chunks')
-        .select('id, chunk_index, content, metadata')
-        .eq('document_id', documentId)
-        .order('chunk_index');
+    if (docResult.rows.length === 0) throw new Error('Document not found');
+    const document = docResult.rows[0];
 
-    if (chunkError) throw chunkError;
-    return { ...document, chunks: chunks || [] };
+    const { rows: chunks } = await pool.query(
+        `SELECT id, chunk_index, content, metadata
+         FROM document_chunks
+         WHERE document_id = $1
+         ORDER BY chunk_index`,
+        [documentId]
+    );
+
+    return { ...document, chunks };
 }
 
-/**
- * Delete a document — verifies ownership if userId provided.
- * @param {string} documentId
- * @param {string|null} userId
- */
 export async function deleteDocument(documentId, userId = null) {
     console.log(`🗑️ Deleting document: ${documentId} (user: ${userId || 'anonymous'})`);
 
-    // First verify the document exists and belongs to this user (or has no owner)
-    let query = supabase.from('documents').select('id, user_id').eq('id', documentId);
-    const { data: doc, error: fetchErr } = await query.single();
-
-    if (fetchErr || !doc) {
-        throw new Error('Document not found');
+    let docResult;
+    if (userId) {
+        docResult = await pool.query(
+            `SELECT id, user_id FROM documents WHERE id = $1`,
+            [documentId]
+        );
+    } else {
+        docResult = await pool.query(
+            `SELECT id, user_id FROM documents WHERE id = $1`,
+            [documentId]
+        );
     }
 
-    // Allow delete if: no userId filter, doc has no owner, or userId matches
+    if (docResult.rows.length === 0) throw new Error('Document not found');
+    const doc = docResult.rows[0];
+
     const canDelete = !userId || !doc.user_id || doc.user_id === userId;
-    if (!canDelete) {
-        throw new Error('Not authorized to delete this document');
-    }
+    if (!canDelete) throw new Error('Not authorized to delete this document');
 
-    // Explicitly delete chunks first as a safety net
-    // (ON DELETE CASCADE should handle this, but belt-and-suspenders)
-    const { error: chunkErr } = await supabase
-        .from('document_chunks')
-        .delete()
-        .eq('document_id', documentId);
-    if (chunkErr) {
-        console.warn('⚠️ Could not delete chunks explicitly:', chunkErr.message);
-    }
-
-    const { error } = await supabase.from('documents').delete().eq('id', documentId);
-    if (error) throw error;
+    await pool.query(`DELETE FROM document_chunks WHERE document_id = $1`, [documentId]);
+    await pool.query(`DELETE FROM documents WHERE id = $1`, [documentId]);
 
     console.log('  ✓ Document and chunks deleted');
     return { deleted: true, documentId };
 }
 
-/**
- * Get stats scoped to a user (or global if userId is null).
- * Gracefully handles missing user_id column (pre-migration).
- * @param {string|null} userId
- */
 export async function getStats(userId = null) {
-    // Helper: global stats (no user filter)
-    const globalStats = async () => {
-        const { count: docCount } = await supabase
-            .from('documents').select('*', { count: 'exact', head: true });
-        const { count: chunkCount } = await supabase
-            .from('document_chunks').select('*', { count: 'exact', head: true });
+    if (!userId) {
+        const { rows } = await pool.query(`SELECT COUNT(*) as count FROM documents`);
+        const { rows: chunkRows } = await pool.query(`SELECT COUNT(*) as count FROM document_chunks`);
+        const docCount = parseInt(rows[0].count);
+        const chunkCount = parseInt(chunkRows[0].count);
         return {
-            documents: docCount || 0,
-            chunks: chunkCount || 0,
-            avgChunksPerDoc: docCount ? Math.round((chunkCount || 0) / docCount) : 0
-        };
-    };
-
-    if (!userId) return globalStats();
-
-    try {
-        // Count documents for this user
-        const { count: docCount, error: docError } = await supabase
-            .from('documents')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', userId);
-
-        if (docError) throw docError;
-
-        // Count chunks via user's document IDs
-        let chunkCount = 0;
-        if (docCount > 0) {
-            const { data: userDocs } = await supabase
-                .from('documents').select('id').eq('user_id', userId);
-            if (userDocs?.length > 0) {
-                const { count } = await supabase
-                    .from('document_chunks')
-                    .select('*', { count: 'exact', head: true })
-                    .in('document_id', userDocs.map(d => d.id));
-                chunkCount = count || 0;
-            }
-        }
-
-        return {
-            documents: docCount || 0,
+            documents: docCount,
             chunks: chunkCount,
             avgChunksPerDoc: docCount ? Math.round(chunkCount / docCount) : 0
         };
+    }
 
+    try {
+        const { rows } = await pool.query(
+            `SELECT COUNT(*) as count FROM documents WHERE user_id = $1`,
+            [userId]
+        );
+        const docCount = parseInt(rows[0].count);
+
+        let chunkCount = 0;
+        if (docCount > 0) {
+            const { rows: userDocs } = await pool.query(
+                `SELECT id FROM documents WHERE user_id = $1`,
+                [userId]
+            );
+            const { rows: chunkRows } = await pool.query(
+                `SELECT COUNT(*) as count FROM document_chunks
+                 WHERE document_id = ANY($1)`,
+                [userDocs.map(d => d.id)]
+            );
+            chunkCount = parseInt(chunkRows[0].count);
+        }
+
+        return {
+            documents: docCount,
+            chunks: chunkCount,
+            avgChunksPerDoc: docCount ? Math.round(chunkCount / docCount) : 0
+        };
     } catch (err) {
-        // Supabase returns an empty error object when the column doesn't exist yet.
-        // Fall back to global stats in all cases — the migration warning is enough.
-        console.warn('⚠️  getStats failed (user_id column may be missing) — run schema_v3_migration.sql');
-        return globalStats();
+        console.warn('⚠️  getStats failed:', err.message);
+        const { rows } = await pool.query(`SELECT COUNT(*) as count FROM documents`);
+        const { rows: chunkRows } = await pool.query(`SELECT COUNT(*) as count FROM document_chunks`);
+        return {
+            documents: parseInt(rows[0].count),
+            chunks: parseInt(chunkRows[0].count),
+            avgChunksPerDoc: 0
+        };
     }
 }
 
-/**
- * Seed database with initial FAQ documents (for a specific user or anonymous).
- */
 export async function seedFAQs(userId = null) {
     console.log('🌱 Seeding database with FAQs...');
 
