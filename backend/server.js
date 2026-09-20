@@ -37,9 +37,31 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-// Test database connection and ensure schema
-await testConnection();
-await ensureSchema();
+// Test database connection and ensure schema (non-blocking on cold start)
+let schemaReady = false;
+const initDb = async () => {
+  try {
+    await testConnection();
+    await ensureSchema();
+    schemaReady = true;
+  } catch (err) {
+    console.warn('⚠️ DB not ready yet (Neon cold start) — will retry on first request');
+  }
+};
+await initDb();
+
+// Retry schema setup on first request if startup cold-start blocked it
+app.use(async (req, res, next) => {
+  if (!schemaReady) {
+    try {
+      await ensureSchema();
+      schemaReady = true;
+    } catch {
+      return res.status(503).json({ error: 'Database is waking up — try again in a few seconds' });
+    }
+  }
+  next();
+});
 
 // Health check
 app.get('/api/health', async (req, res) => {
