@@ -177,7 +177,22 @@ async function searchRelevantChunks(queryEmbedding, options = {}) {
         }
 
         const data = result.rows;
-        if (!data || data.length === 0) return [];
+
+        // If the client pinned specific documents but none matched (e.g. stale
+        // IDs cached from a previous database or unchecked out-of-sync state),
+        // fall back to searching everything rather than returning "no info".
+        if ((!data || data.length === 0) && documentIds && documentIds.length > 0) {
+            console.warn('⚠️  documentIds filter returned no chunks, retrying without filter');
+            result = await pool.query(
+                `SELECT * FROM search_similar_chunks($1, $2, $3, $4, $5)`,
+                [embeddingString, threshold, topK, null, userId || null]
+            ).catch(() => pool.query(
+                `SELECT * FROM search_similar_chunks($1, $2, $3, $4)`,
+                [embeddingString, threshold, topK, null]
+            ));
+        }
+        const fallbackData = result.rows;
+        if (!data || data.length === 0) return fallbackData || [];
 
         const deduplicated = deduplicateChunks(data, 0.85);
         const scored = deduplicated.map((chunk, idx) => ({
