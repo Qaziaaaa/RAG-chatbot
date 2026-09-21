@@ -55,6 +55,23 @@ setInterval(() => {
 
 // ── Text extraction ─────────────────────────────────────────────────────────
 
+/**
+ * Sanitize text by removing/replacing control characters that cause
+ * "unsupported Unicode escape sequence" errors in PostgreSQL JSON parsing.
+ * Removes: null bytes, BOM, Unicode control chars (U+0000-U+001F, U+007F-U+009F)
+ * Preserves: newlines, tabs, and printable characters.
+ */
+function sanitizeText(text) {
+    if (!text || typeof text !== 'string') return '';
+    // Remove BOM
+    let clean = text.replace(/^\uFEFF/, '');
+    // Replace null bytes and other control chars with space (preserve \n, \t, \r)
+    clean = clean.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ');
+    // Collapse multiple spaces but preserve intentional newlines
+    clean = clean.replace(/[ \t]+/g, ' ');
+    return clean.trim();
+}
+
 export async function extractText(buffer, mimeType, filename) {
     const ext = filename.split('.').pop().toLowerCase();
 
@@ -66,7 +83,7 @@ export async function extractText(buffer, mimeType, filename) {
         return extractJsonText(buffer);
     }
 
-    return buffer.toString('utf-8');
+    return sanitizeText(buffer.toString('utf-8'));
 }
 
 async function extractPdfText(buffer) {
@@ -78,7 +95,7 @@ async function extractPdfText(buffer) {
     text = text.replace(/^[\s\-–—]*\d+[\s\-–—]*$/gm, '');
     text = text.replace(/[ \t]+/g, ' ');
 
-    return text.trim();
+    return sanitizeText(text.trim());
 }
 
 function extractJsonText(buffer) {
@@ -138,7 +155,7 @@ async function _runIngestion(jobId, buffer, filename, mimeType, userId = null) {
     console.log(`  ✓ Document record: ${documentId}`);
 
     console.log('  2. Chunking...');
-    const chunks = processDocument({ title, content: text, source: filename });
+    const chunks = processDocument({ title, content: sanitizeText(text), source: filename });
     console.log(`  ✓ ${chunks.length} chunks`);
     if (chunks.length === 0) throw new Error('No chunks produced — document may be empty');
 
@@ -151,10 +168,11 @@ async function _runIngestion(jobId, buffer, filename, mimeType, userId = null) {
         const withEmbeddings = await prepareChunksBatch(batch, documentId);
 
         for (const chunk of withEmbeddings) {
+            const safeContent = sanitizeText(chunk.content);
             const { error: chunkErr } = await pool.query(
                 `INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, metadata)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [chunk.id, chunk.document_id, chunk.chunk_index, chunk.content,
+                [chunk.id, chunk.document_id, chunk.chunk_index, safeContent,
                  JSON.stringify(chunk.embedding), JSON.stringify(chunk.metadata)]
             );
             if (chunkErr) throw new Error(`Chunk insert failed: ${chunkErr.message}`);
