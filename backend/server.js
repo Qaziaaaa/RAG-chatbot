@@ -5,6 +5,11 @@ import { getChatResponse } from './services/llm.js';
 import pool, { testConnection, ensureSchema } from './config/database.js';
 import ragRoutes from './routes/rag.js';
 
+// Prevent crash on unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('⚠️ Unhandled rejection:', err.message || err);
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 

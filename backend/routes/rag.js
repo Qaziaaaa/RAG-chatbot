@@ -115,6 +115,8 @@ router.post('/chat/stream', async (req, res) => {
     const { message, topK = 5, sessionId, documentIds, mode = 'normal' } = req.body;
     const userId = req.userId;
 
+    console.log(`📥 Stream request: message="${message}", userId=${userId}, sessionId=${sessionId}, mode=${mode}`);
+
     if (!message || message.trim() === '') {
         return res.status(400).json({ error: 'Message is required' });
     }
