@@ -419,9 +419,10 @@ function DocumentLibrary({ selectedIds, onToggle, refreshTrigger, userId }) {
   );
 }
 
-// Backend URL — uses relative path in production (same origin),
-// direct localhost in development to bypass Vite proxy buffering for SSE.
-const BACKEND_URL = import.meta.env.DEV ? 'http://localhost:3000' : '';
+// Backend URL — uses VITE_BACKEND_URL in production, localhost in dev
+const BACKEND_URL = import.meta.env.DEV
+  ? 'http://localhost:3000'
+  : import.meta.env.VITE_BACKEND_URL || '';
 
 function streamChat(body, { onToken, onSources, onDone, onError }) {
   const controller = new AbortController();
