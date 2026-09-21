@@ -27,3 +27,5 @@ Thumbs.db
 # Temp files
 *.tmp
 *.temp
+.neon
+.env.local
